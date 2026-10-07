@@ -1,0 +1,17 @@
+Automated Account Registration and Storage Resource Abuse Vulnerability
+Gene
+
+2026-10-07
+Security Advisory: Automated Account Abuse and Excessive Storage Consumption
+
+Team Gene identified and resolved an abuse-related security issue affecting its forum service. Insufficient controls against automated account creation could allow large numbers of accounts to be registered and used to consume disproportionate storage resources through the forum's file functionality.
+
+The issue was investigated and remediated by introducing additional automated-registration protections and resource-abuse controls. No evidence of unauthorized access to other users' data was identified during the investigation.
+
+Status: Resolved
+
+Reported by: [Gene]
+
+Security remediation: [Gene] and the Team Gene team
+
+https://team-gene.com/news/5a73a99a-b655-48d4-bca1-9bf33031f775
