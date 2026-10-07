@@ -621,28 +621,6 @@ html:not(.js) .frame img { opacity: 1; }
 }
 .site-header.on-dark .nav__link[aria-current="page"]::after { background: var(--peach); }
 
-/* The mail entry shares the navigation row and its 36px height in every state. */
-.nav__link--mail {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 36px;
-  margin: 0;
-  padding: 7px 16px;
-  background: var(--glass-thin);
-  box-shadow: inset 0 0 0 1px var(--line-2), var(--glass-edge);
-  opacity: 1;
-  transform: none;
-  transition: background-color .3s, color .3s;
-}
-.nav__link--mail > span { display: block; line-height: 22px; }
-.nav__link--mail .icon { width: 16px; height: 16px; flex: none; transform: none; }
-.nav__link--mail:hover { background: var(--surface); }
-.nav__link--mail[aria-current="page"] { color: var(--paper); background: var(--ink); }
-.nav__link--mail[aria-current="page"]::after { content: none; }
-.site-header.on-dark .nav__link--mail { background: rgb(243 239 228 / .06); box-shadow: inset 0 0 0 1px var(--on-forest-line), inset 0 1px 0 rgb(255 255 255 / .08); }
-.site-header.on-dark .nav__link--mail:hover { background: rgb(243 239 228 / .12); }
-
 .header-actions { display: flex; align-items: center; gap: 8px; flex: none; }
 .site-header .btn--mail {
   --btn-bg: var(--glass-thin);
