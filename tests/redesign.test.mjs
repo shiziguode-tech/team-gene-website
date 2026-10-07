@@ -100,7 +100,7 @@ test('gallery photos and paper figures open in one page-wide viewer; GIFs and vi
   assert.match(figure,/srcset="[^\"]*model.png\?w=640 640w/,'paper figures choose a responsive preview');
 });
 test('empty record sections leave the header, menu and footer; their page drops the "00" counter',()=>{
-  const navLinks=html=>[...html.matchAll(/class="(nav__link|menu__link)"[^>]*href="\/(\w+)"/g)].map(m=>m[1]+':'+m[2]);
+  const navLinks=html=>[...html.matchAll(/class="(nav__link|menu__link)(?: [^"]+)?"[^>]*href="\/(\w+)"/g)].map(m=>m[1]+':'+m[2]);
   const site=createRedesign([entry('news')]);
   const home=site.page('home').html;
   for(const kind of ['nav__link','menu__link'])for(const key of ['awards','life'])assert.ok(!navLinks(home).includes(kind+':'+key),kind+' hides empty '+key);
