@@ -632,7 +632,13 @@ html:not(.js) .frame img { opacity: 1; }
 .site-header .btn--mail:hover, .site-header .btn--ghost:hover { --btn-bg: var(--surface); }
 .site-header.on-dark .btn--mail { --btn-bg: rgb(243 239 228 / .06); --btn-bd: var(--on-forest-line); box-shadow: inset 0 1px 0 rgb(255 255 255 / .08); }
 .site-header.on-dark .btn--mail:hover { --btn-bg: rgb(243 239 228 / .12); }
-.site-header .btn--mail[aria-current="page"] { --btn-bg: var(--ink); --btn-fg: var(--paper); --btn-bd: var(--ink); }
+.site-header .btn--mail[aria-current="page"] {
+  --btn-bg: var(--ink);
+  --btn-fg: var(--paper);
+  --btn-bd: var(--ink);
+  /* --glass-edge is a bright top line; on this filled pill it reads as the fill sinking below a gap. */
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .08);
+}
 
 .icon-btn {
   position: relative;

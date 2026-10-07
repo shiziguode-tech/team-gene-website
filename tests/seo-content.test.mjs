@@ -101,6 +101,18 @@ test('record sections with entries stay listed and indexed; HTTPS is pinned for 
   assert.doesNotMatch(head,/name="robots"/,'the seeded awards keep the page indexable');
   assert.match(await (await request('/sitemap.xml')).text(),/<loc>https:\/\/team-gene\.com\/awards<\/loc>/);
 });
+test('the mail page and 404 pages list the same header sections as the home page',async()=>{
+  // A 404 thrown by a dynamic route streams its body in the RSC payload, where quotes are escaped.
+  const navOf=async path=>{
+    const html=await (await request(path)).text();
+    // Home/mail must expose the links in rendered HTML, not only a serialized 404 fallback.
+    const markup=path==='/'||path==='/mail' ? html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'') : html.replace(/\\"/g,'"');
+    return [...new Set([...markup.matchAll(/class="nav__link" href="([^"]+)"/g)].map(match=>match[1]))];
+  };
+  const home=await navOf('/');
+  assert.ok(home.includes('/awards'),'the seeded record section is listed on the home page');
+  for(const path of ['/mail','/no-such-section','/a/b/c/d'])assert.deepEqual(await navOf(path),home,path);
+});
 test('public entry detail HTML, discoverable links, sitemap updates and deletion are consistent',async()=>{
   let entry={...record(),title:'Searchable paper',researchBackground:'Unique background visible without JavaScript',researchResults:'Unique findings'};
   let response=await request('/api/content','POST',entry);assert.equal(response.status,200);
