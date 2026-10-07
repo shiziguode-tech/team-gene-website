@@ -1,0 +1,6 @@
+:80 {
+  @private path /admin /admin/* /api/admin /api/admin/*
+  respond @private 404
+  encode zstd gzip
+  reverse_proxy app:3000
+}

@@ -1,0 +1,15 @@
+{
+  "test-research-preset": {
+    "backgroundHash": "f37f59e5213152d69c0639abf542e3333f307276492f7abec5eb504a15684f05",
+    "highlights": [
+      {
+        "value": "+5%",
+        "label": "Fictional example improvement"
+      },
+      {
+        "value": "2x",
+        "label": "Fictional example throughput"
+      }
+    ]
+  }
+}

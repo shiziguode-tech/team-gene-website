@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title></title>
+<!-- Team Gene: empty reading pane (no message, contact or setting selected).
+     Replaces Elastic's washed-out Roundcube logo with the Team Gene mark. -->
+<style type="text/css">
+:root { --paper: #fffefb; --ring: rgba(30, 77, 65, .28); --clay: #c97b55; --ink: #1e4d41; --text: #1d2f29; --muted: #6b7a72; }
+html.dark-mode { --paper: #0f1a16; --ring: rgba(213, 224, 218, .22); --clay: #e9a882; --ink: #d5e0da; --text: #d5e0da; --muted: #8fa199; }
+html, body { height: 100%; margin: 0; overflow: hidden; }
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--paper);
+  color: var(--text);
+  font-family: Inter, Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  text-align: center;
+}
+.mark { width: 88px; height: 88px; }
+.mark .ring { stroke: var(--ring); }
+.mark .orbit { stroke: var(--clay); }
+.mark .g { fill: var(--ink); }
+p { margin: 0; }
+.name { margin-top: 18px; font-size: 15px; font-weight: 600; letter-spacing: .08em; }
+.hint { margin-top: 6px; font-size: 13px; color: var(--muted); }
+@media (max-height: 260px) { .mark { width: 56px; height: 56px; } .hint { display: none; } }
+</style>
+<script>
+  try {
+    if (document.cookie.indexOf('colorMode=dark') > -1
+      || (document.cookie.indexOf('colorMode=light') === -1 && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    ) {
+      document.documentElement.className += ' dark-mode';
+    }
+  } catch (e) { }
+</script>
+</head>
+<body>
+<div>
+<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><circle class="ring" cx="20" cy="20" r="18.5" fill="none" stroke-width=".8"/><ellipse class="orbit" cx="20" cy="20" rx="19.5" ry="6.5" fill="none" stroke-width=".8" transform="rotate(-28 20 20)"/><path class="g" transform="translate(14.35 27.60)" d="M5.191999999999999 0.19799999999999998Q3.3 0.19799999999999998 2.222 -1.287Q1.144 -2.772 1.144 -5.566Q1.144 -6.731999999999999 1.4409999999999998 -8.14Q1.738 -9.548 2.343 -10.945Q2.948 -12.341999999999999 3.8499999999999996 -13.497Q4.752 -14.652 5.984 -15.355999999999998Q7.215999999999999 -16.06 8.756 -16.06Q9.724 -16.06 10.405999999999999 -15.895Q11.088 -15.729999999999999 11.549999999999999 -15.466Q11.748 -15.356 11.681999999999999 -15.004L11.022 -11.66Q10.956 -11.286 10.67 -11.286Q10.405999999999999 -11.286 10.405999999999999 -11.572L10.383999999999999 -12.209999999999999Q10.318 -14.101999999999999 9.911 -14.794999999999998Q9.504 -15.488 8.645999999999999 -15.488Q7.6339999999999995 -15.488 6.808999999999999 -14.937999999999999Q5.984 -14.388 5.313 -13.463999999999999Q4.6419999999999995 -12.54 4.146999999999999 -11.418Q3.6519999999999997 -10.296 3.3329999999999997 -9.129999999999999Q3.014 -7.9639999999999995 2.8489999999999998 -6.93Q2.6839999999999997 -5.896 2.6839999999999997 -5.17Q2.6839999999999997 -2.772 3.399 -1.573Q4.114 -0.374 5.258 -0.374Q5.962 -0.374 6.512 -0.7809999999999999Q7.061999999999999 -1.188 7.303999999999999 -2.266L8.404 -7.084Q8.514 -7.523999999999999 8.437 -7.710999999999999Q8.36 -7.898 7.853999999999999 -7.941999999999999L7.084 -8.03Q6.798 -8.052 6.798 -8.272Q6.798 -8.536 7.194 -8.536H11.176Q11.462 -8.536 11.462 -8.315999999999999Q11.462 -8.074 11.132 -8.03L10.802 -7.986Q10.318 -7.92 10.175 -7.7219999999999995Q10.032 -7.523999999999999 9.921999999999999 -7.061999999999999L8.645999999999999 -1.5399999999999998Q8.602 -1.2979999999999998 8.415 -1.0779999999999998Q8.228 -0.858 7.832 -0.616Q7.281999999999999 -0.286 6.643999999999999 -0.044Q6.005999999999999 0.19799999999999998 5.191999999999999 0.19799999999999998Z"/></svg>
+<p class="name">Team Gene 邮箱</p>
+<p class="hint">从左侧选择一项开始</p>
+</div>
+</body>
+</html>

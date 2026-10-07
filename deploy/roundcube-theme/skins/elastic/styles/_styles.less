@@ -1,0 +1,800 @@
+/**
+ * Team Gene theme for the Elastic skin — extra rules.
+ *
+ * Loaded through Elastic's own hook at the end of styles.less
+ * (`@import (optional) "_styles"`). Colours live in _variables.less.
+ * Rebuild styles/embed/print .css and .min.css (+ .map, .gz) with less 4.9.1
+ * and less-plugin-clean-css 1.6.0 (min files: --clean-css="--s1 --advanced");
+ * see docs/UI-玻璃质感说明.md.
+ */
+
+// Inter for Latin UI text (same files as public/redesign, OFL — see
+// fonts/inter-OFL.txt). Chinese text uses the system fonts listed below.
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url('../fonts/inter-latin.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url('../fonts/inter-latin-ext.woff2') format('woff2');
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+// Same name as the mixin in mixins.less: LESS applies every matching mixin in
+// definition order, so this later declaration wins at each call site
+// (including the !important one in widgets/editor.less).
+.font-family() {
+    font-family: Inter, Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+}
+
+/*** Task menu: clay marker on the current task ***/
+
+#taskmenu a.selected {
+    box-shadow: inset 3px 0 0 @color-taskmenu-button-action;
+}
+
+/*** Login ***/
+
+.task-login {
+    #layout-content {
+        background:
+            // soft light just behind the sign-in card, for its glass to frost
+            radial-gradient(18% 22% at 59% 25%, fade(#c96e46, 20%), transparent 70%),
+            radial-gradient(18% 22% at 42% 40%, fade(#78aa91, 22%), transparent 70%),
+            radial-gradient(55% 70% at 100% 100%, fade(#c96e46, 16%), transparent 70%),
+            radial-gradient(45% 55% at 0 0, fade(#78aa91, 18%), transparent 70%),
+            @color-layout-header-background;
+    }
+
+    #logo {
+        top: 11vh;
+        max-width: 80%;
+        max-height: 64px;
+    }
+}
+
+#login-form {
+    top: 15vh;
+    max-width: 380px;
+    padding: 2rem 1.75rem 1.5rem;
+    background: @color-layout-content-background;
+    border: 1px solid @color-border;
+    border-radius: 1.25rem;
+    box-shadow: 0 40px 80px -28px fade(@color-main-dark, 30%), 0 10px 24px -12px fade(@color-main-dark, 12%);
+
+    // Round the outer corners of each icon + input pair only.
+    .input-group > .input-group-prepend > .input-group-text {
+        border-top-left-radius: .6rem;
+        border-bottom-left-radius: .6rem;
+    }
+
+    .input-group > .form-control {
+        border-top-right-radius: .6rem;
+        border-bottom-right-radius: .6rem;
+    }
+}
+
+#rcmloginsubmit {
+    border-radius: 999px;
+    letter-spacing: .08em;
+}
+
+#login-footer {
+    font-size: .8rem;
+}
+
+html.dark-mode {
+    // dark.less uses @color-main as a text colour in three places; forest green
+    // is too dark on the dark background, so use the peach accent instead.
+    #taskmenu .action-buttons a,
+    .tox .tox-dialog__body-nav-item--active,
+    .ui-datepicker .ui-state-highlight,
+    .ui-datepicker.ui-widget-content .ui-state-highlight {
+        color: @color-taskmenu-button-action;
+    }
+
+    .task-login #layout-content {
+        background:
+            radial-gradient(18% 22% at 59% 25%, fade(#c96e46, 16%), transparent 70%),
+            radial-gradient(18% 22% at 42% 40%, fade(#78aa91, 12%), transparent 70%),
+            radial-gradient(55% 70% at 100% 100%, fade(#c96e46, 12%), transparent 70%),
+            @color-dark-background;
+    }
+
+    #login-form {
+        background: lighten(@color-dark-background, 3%);
+        border-color: @color-dark-border;
+        box-shadow: 0 40px 80px -28px fade(#000, 60%);
+    }
+}
+
+/*** Glass surfaces ***/
+
+// Same recipe as the website's --glass-* tokens (public/redesign/site.css):
+// translucent tint + backdrop blur, a hairline border, a light top edge and
+// layered shadows. Only chrome that floats over mail gets it: menus,
+// dialogs, notifications, the sign-in card and the phone compose button.
+// Lists and message text stay on solid surfaces. Without backdrop-filter the
+// original solid colours remain; phone/small layouts keep their full-screen
+// sheets solid; reduced transparency switches the tokens back to solid.
+
+@tg-glass-edge:        inset 0 1px 0 fade(#fff, 70%);
+@tg-glass-shadow:      0 1px 1px fade(@color-main-dark, 4%), 0 14px 34px -14px fade(@color-main-dark, 26%), 0 36px 72px -36px fade(@color-main-dark, 24%);
+@tg-glass-dark-edge:   inset 0 1px 0 fade(#fff, 6%);
+@tg-glass-dark-shadow: 0 1px 1px fade(#000, 30%), 0 14px 34px -14px fade(#000, 62%), 0 36px 72px -36px fade(#000, 50%);
+@tg-glass-radius:      .875rem;
+
+// Shape and depth (no blur needed, so they apply everywhere)
+.popover {
+    border-color: fade(@color-font, 12%);
+    border-radius: @tg-glass-radius;
+    box-shadow: @tg-glass-shadow;
+}
+
+.popover-body {
+    border-radius: inherit; // clip menu rows to the rounded corners
+}
+
+html .ui-menu {
+    border-radius: .75rem;
+    box-shadow: @tg-glass-shadow;
+}
+
+html.dark-mode .popover,
+html.dark-mode .ui-menu {
+    box-shadow: @tg-glass-dark-shadow;
+}
+
+@media screen and (min-width: (@screen-width-xs + 1px)) {
+    html .ui-dialog {
+        border-color: fade(@color-font, 12%);
+        border-radius: @tg-glass-radius;
+        box-shadow: @tg-glass-shadow;
+    }
+
+    html.dark-mode .ui-dialog {
+        box-shadow: @tg-glass-dark-shadow;
+    }
+
+    html .ui-dialog > .ui-dialog-titlebar {
+        border-radius: @tg-glass-radius @tg-glass-radius 0 0;
+    }
+
+    html .ui-dialog > .ui-dialog-buttonpane {
+        border-radius: 0 0 @tg-glass-radius @tg-glass-radius;
+    }
+
+    #messagestack div {
+        border-radius: .75rem;
+        box-shadow: 0 12px 30px -14px fade(@color-main-dark, 45%);
+    }
+}
+
+.floating-action-buttons a.button {
+    opacity: 1;
+    box-shadow: 0 10px 24px -10px fade(@color-main-dark, 60%), 0 2px 6px fade(@color-main-dark, 18%), inset 0 1px 0 fade(#fff, 16%);
+}
+
+html.dark-mode .floating-action-buttons a.button {
+    box-shadow: 0 10px 24px -10px fade(#000, 70%), inset 0 1px 0 fade(#fff, 10%);
+}
+
+// Short, light entrance for menus and dialogs (translate keeps Popper's transform intact)
+@keyframes tg-glass-in {
+    from { opacity: 0; translate: 0 -4px; }
+}
+
+html:not(.layout-small):not(.layout-phone) .popover,
+html .ui-dialog {
+    animation: tg-glass-in .18s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html:not(.layout-small):not(.layout-phone) .popover,
+    html .ui-dialog {
+        animation: none;
+    }
+}
+
+// Translucency and blur
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    :root {
+        --tg-glass-blur: saturate(180%) blur(20px);
+        --tg-glass-blur-lite: saturate(160%) blur(10px);
+        --tg-glass-scrim-blur: blur(4px);
+        --tg-glass-menu: fade(@color-layout-content-background, 84%);
+        --tg-glass-dialog: fade(@color-layout-content-background, 90%);
+        --tg-glass-card: fade(@color-layout-content-background, 72%);
+        --tg-glass-fab: fade(@color-main, 86%);
+    }
+
+    html.dark-mode {
+        --tg-glass-menu: fade(@color-dark-popover-background, 84%);
+        --tg-glass-dialog: fade(@color-dark-background, 90%);
+        --tg-glass-card: fade(lighten(@color-dark-background, 3%), 72%);
+        --tg-glass-fab: fade(@color-dark-main, 88%);
+    }
+
+    // Touch screens: lighter blur, none behind dialogs
+    html.touch,
+    html.layout-phone {
+        --tg-glass-blur: saturate(150%) blur(12px);
+        --tg-glass-scrim-blur: none;
+    }
+
+    @media (prefers-reduced-transparency: reduce) {
+        :root,
+        html.dark-mode,
+        html.touch,
+        html.layout-phone {
+            --tg-glass-blur: none;
+            --tg-glass-blur-lite: none;
+            --tg-glass-scrim-blur: none;
+        }
+
+        :root {
+            --tg-glass-menu: @color-layout-content-background;
+            --tg-glass-dialog: @color-layout-content-background;
+            --tg-glass-card: @color-layout-content-background;
+            --tg-glass-fab: @color-main;
+        }
+
+        html.dark-mode {
+            --tg-glass-menu: @color-dark-popover-background;
+            --tg-glass-dialog: @color-dark-background;
+            --tg-glass-card: lighten(@color-dark-background, 3%);
+            --tg-glass-fab: @color-dark-main;
+        }
+    }
+
+    // Menus and dropdown lists
+    .popover,
+    html.dark-mode .popover,
+    html:not(.touch) .ui-menu,
+    html.dark-mode:not(.touch) .ui-menu {
+        background-color: var(--tg-glass-menu);
+        -webkit-backdrop-filter: var(--tg-glass-blur);
+        backdrop-filter: var(--tg-glass-blur);
+    }
+
+    .popover {
+        box-shadow: @tg-glass-shadow, @tg-glass-edge;
+
+        > .arrow {
+            display: none; // a solid arrow would not match the frosted panel
+        }
+    }
+
+    html.dark-mode .popover {
+        border-color: fade(#fff, 9%);
+        box-shadow: @tg-glass-dark-shadow, @tg-glass-dark-edge;
+    }
+
+    // Phone and small layouts show menus as full-height side sheets: keep them solid
+    html.layout-small .popover:not(.select-menu),
+    html.layout-phone .popover:not(.select-menu) {
+        background-color: #fff;
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+        box-shadow: none;
+    }
+
+    html.dark-mode.layout-small .popover:not(.select-menu),
+    html.dark-mode.layout-phone .popover:not(.select-menu) {
+        background-color: @color-dark-popover-background;
+    }
+
+    // Dialogs (phone dialogs are full-screen and stay solid)
+    @media screen and (min-width: (@screen-width-xs + 1px)) {
+        html .ui-dialog,
+        html.dark-mode .ui-dialog {
+            background-color: var(--tg-glass-dialog);
+            -webkit-backdrop-filter: var(--tg-glass-blur);
+            backdrop-filter: var(--tg-glass-blur);
+        }
+
+        html .ui-dialog {
+            box-shadow: @tg-glass-shadow, @tg-glass-edge;
+        }
+
+        html.dark-mode .ui-dialog {
+            box-shadow: @tg-glass-dark-shadow, @tg-glass-dark-edge;
+        }
+
+        html .ui-dialog > .ui-dialog-titlebar,
+        html .ui-dialog > .ui-dialog-content,
+        html .ui-dialog > .ui-dialog-buttonpane {
+            background-color: transparent;
+        }
+
+        .ui-widget-overlay {
+            -webkit-backdrop-filter: var(--tg-glass-scrim-blur);
+            backdrop-filter: var(--tg-glass-scrim-blur);
+        }
+
+        // Notifications: dark frosted toasts, like the website's
+        #messagestack {
+            div {
+                background-color: fade(@color-message, 86%);
+                -webkit-backdrop-filter: var(--tg-glass-blur);
+                backdrop-filter: var(--tg-glass-blur);
+            }
+
+            .loading { background-color: fade(@color-message-loading, 86%); }
+            .alert-info.information { background-color: fade(@color-message-information, 88%); }
+            .alert-success { background-color: fade(@color-message-success, 88%); }
+            .alert-warning { background-color: fade(@color-message-warning, 90%); }
+            .alert-danger { background-color: fade(@color-message-error, 88%); }
+        }
+
+        html.dark-mode #messagestack {
+            .loading { background-color: fade(@color-dark-message-loading, 88%); }
+            .alert-info { background-color: fade(@color-dark-message-information, 88%); }
+            .alert-success { background-color: fade(@color-dark-message-success, 88%); }
+            .alert-warning { background-color: fade(@color-dark-message-warning, 90%); }
+            .alert-danger { background-color: fade(@color-dark-message-error, 88%); }
+        }
+    }
+
+    // Sign-in card over the soft brand light
+    #login-form,
+    html.dark-mode #login-form {
+        background: var(--tg-glass-card);
+        -webkit-backdrop-filter: var(--tg-glass-blur);
+        backdrop-filter: var(--tg-glass-blur);
+    }
+
+    #login-form {
+        border-color: fade(#fff, 65%);
+        box-shadow: 0 40px 80px -28px fade(@color-main-dark, 30%), 0 10px 24px -12px fade(@color-main-dark, 12%), @tg-glass-edge;
+    }
+
+    html.dark-mode #login-form {
+        border-color: fade(#fff, 8%);
+        box-shadow: 0 40px 80px -28px fade(#000, 60%), @tg-glass-dark-edge;
+    }
+
+    // Phone compose button floating over the message list
+    .floating-action-buttons a.button,
+    html.dark-mode .floating-action-buttons a.button {
+        background: var(--tg-glass-fab);
+        -webkit-backdrop-filter: var(--tg-glass-blur-lite);
+        backdrop-filter: var(--tg-glass-blur-lite);
+    }
+}
+
+/*** Reading, lists and attachments ***/
+
+// Plain-text mail used a terminal font, which set Chinese text in monospace.
+// Read it in the interface font; quotes and signatures keep their colours.
+.message-part div.pre {
+    .font-family();
+    font-size: 15px;
+    line-height: 1.75;
+    overflow-wrap: anywhere;
+}
+
+#message-header {
+    & > .subject {
+        font-size: 1.375rem;
+        font-weight: 600;
+        line-height: 1.45;
+
+        body.status-flagged &:before {
+            color: @color-link;
+        }
+    }
+
+    .header-summary {
+        color: @color-black-shade-text;
+
+        .adr a.rcmContactAddress {
+            color: @color-font;
+            font-weight: 600;
+        }
+    }
+
+    .header-links a {
+        color: @color-black-shade-text;
+
+        &:hover,
+        &:focus {
+            color: @color-link;
+        }
+    }
+}
+
+// Message list: calmer rows. Read mail has no status dot (it reappears on
+// hover, where clicking it marks the mail unread), unread mail is marked by a
+// clay dot and a darker sender, and a flag colours only its own icon.
+.messagelist {
+    tr.message td.subject {
+        padding-top: .3rem;
+        padding-bottom: .3rem;
+    }
+
+    tr:not(.deleted) td.subject span.msgicon.status:not(.unread):not(.unreadchildren):not(.replied):not(.forwarded):before {
+        color: transparent;
+    }
+
+    tr:not(.deleted):hover td.subject span.msgicon.status:not(.unread):not(.unreadchildren):not(.replied):not(.forwarded):before {
+        color: @color-list-icon;
+    }
+
+    tr:not(.deleted) td.subject span.msgicon.status.unread:before {
+        color: @color-link;
+    }
+
+    tr.unread:not(.deleted) td.subject span.fromto {
+        color: @color-font;
+        font-weight: 600;
+    }
+
+    tr.unread td.subject span.subject {
+        font-weight: 600;
+    }
+
+    tr.flagged:not(.deleted) td,
+    tr.flagged:not(.deleted) td.subject span.subject a {
+        color: @color-font;
+    }
+
+    tr.flagged:not(.deleted) td.subject span.date,
+    tr.flagged:not(.deleted) td.subject span.fromto {
+        color: @color-list-secondary;
+    }
+
+    tr.flagged.unread:not(.deleted) td.subject span.fromto {
+        color: @color-font;
+    }
+
+    tr.flagged:not(.deleted) span.flag span:before {
+        color: @color-link;
+    }
+}
+
+// Sender initials (added by plugins/team_gene_avatar/avatar.js): a soft tint
+// per sender, chosen from the name so the same person keeps the same colour.
+.tg-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    border-radius: 50%;
+    font-weight: 600;
+    line-height: 1;
+    user-select: none;
+    background: #e3ece6;
+    color: #1e4d41;
+
+    &.tg-tone-1 { background: #f4e4d8; color: #8a4124; }
+    &.tg-tone-2 { background: #dfecee; color: #2c6670; }
+    &.tg-tone-3 { background: #f3ead3; color: #85621a; }
+    &.tg-tone-4 { background: #ece4ef; color: #6a4a78; }
+    &.tg-tone-5 { background: #e4e8ef; color: #3f5370; }
+}
+
+#messagelist {
+    td.subject.tg-has-avatar {
+        position: relative;
+        padding-left: 3.4rem;
+
+        span.fromto {
+            padding-left: 1.1rem;
+        }
+
+        .tg-avatar {
+            position: absolute;
+            left: .7rem;
+            top: 50%;
+            width: 2.25rem;
+            height: 2.25rem;
+            margin-top: -1.125rem;
+            font-size: .95rem;
+        }
+    }
+}
+
+// A selected row is sage too: keep its avatar distinct.
+#messagelist.tg-avatars tr.selected .tg-avatar {
+    box-shadow: 0 0 0 2px @color-layout-content-background;
+}
+
+html.dark-mode #messagelist.tg-avatars tr.selected .tg-avatar {
+    box-shadow: 0 0 0 2px @color-dark-background;
+}
+
+// The account address above the folders: small enough to show in full.
+#layout-sidebar > .header .header-title.username {
+    font-size: .8125rem;
+    font-weight: 600;
+    letter-spacing: .01em;
+}
+
+#message-header > .header .tg-avatar {
+    width: @mail-header-photo-height;
+    height: @mail-header-photo-height;
+    margin: 0 1rem 0 0;
+    font-size: 1.5rem;
+}
+
+// Attachments of an open message as cards: a tinted file-type tile, the
+// name and the size. The compose form keeps its own attachment list.
+.action-preview,
+.action-show {
+    #attachment-list.attachmentslist {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .5rem;
+        background: transparent;
+        border: 0;
+
+        li {
+            align-items: center;
+            gap: .6rem;
+            min-width: 0;
+            max-width: 22rem;
+            padding: .45rem .35rem .45rem .45rem;
+            line-height: 1.4;
+            border: 1px solid @color-attachmentlist-border;
+            border-radius: .75rem;
+            background: @color-layout-content-background;
+            transition: border-color .2s, box-shadow .2s;
+
+            &:before {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                flex: none;
+                width: 2.25rem;
+                height: 2.25rem;
+                border-radius: .55rem;
+                background: #e3ece6;
+                color: @color-main;
+                font-size: 1.1rem;
+            }
+
+            &.pdf:before { background: #f4e4d8; color: #a8522f; }
+            &.image:before, &.jpg:before, &.jpeg:before, &.png:before { background: #dfecee; color: #2c6670; }
+            &.zip:before, &.rar:before, &.gz:before { background: #f3ead3; color: #85621a; }
+
+            &:hover {
+                border-color: darken(@color-attachmentlist-border, 12%);
+                box-shadow: 0 6px 18px -10px fade(@color-main-dark, 30%);
+            }
+
+            a.filename {
+                display: flex;
+                flex-direction: column;
+                min-width: 0;
+                height: auto; // Elastic fixes one 2rem line; the card has two
+                line-height: 1.4;
+                padding: 0;
+                color: @color-font;
+                text-decoration: none;
+
+                .attachment-name {
+                    .overflow-ellipsis();
+                    flex: none;
+                    font-weight: 500;
+                }
+
+                .attachment-size {
+                    padding: 0;
+                    font-size: .8rem;
+                    color: @color-black-shade-text;
+                }
+            }
+
+            a.button.dropdown {
+                flex: none;
+                border-radius: 50%;
+            }
+        }
+    }
+}
+
+html.dark-mode {
+    .messagelist {
+        tr:not(.flagged):not(.deleted) td.subject span.msgicon.status.unread::before,
+        tr:not(.deleted) td.subject span.msgicon.status.unread:before {
+            color: @color-taskmenu-button-action;
+        }
+
+        tr:not(.deleted).unread td.subject span.fromto {
+            color: @color-dark-font;
+        }
+
+        tr.flagged:not(.deleted) {
+            td,
+            td.subject span.subject a {
+                color: @color-dark-font;
+            }
+
+            &.unread td.subject span.fromto {
+                color: @color-dark-font;
+            }
+
+            td.subject span.date,
+            td.subject span.fromto,
+            span.attachment span {
+                color: @color-dark-hint;
+            }
+
+            span.flag span:before {
+                color: @color-taskmenu-button-action;
+            }
+        }
+    }
+
+    body.status-flagged #message-header > .subject:before {
+        color: @color-taskmenu-button-action;
+    }
+
+    #message-header {
+        .header-summary,
+        .header-links a {
+            color: @color-dark-hint;
+        }
+
+        .header-links a:hover,
+        .header-links a:focus {
+            color: @color-taskmenu-button-action;
+        }
+
+        .header-summary .adr a.rcmContactAddress {
+            color: @color-dark-font;
+        }
+    }
+
+    .tg-avatar {
+        background: #1d3a31;
+        color: #cfe3d8;
+
+        &.tg-tone-1 { background: #4a2c1f; color: #f3c3a6; }
+        &.tg-tone-2 { background: #173b40; color: #bfe0e5; }
+        &.tg-tone-3 { background: #45391b; color: #ecd9a6; }
+        &.tg-tone-4 { background: #3a2c42; color: #e2cdea; }
+        &.tg-tone-5 { background: #26324a; color: #ccd8ee; }
+    }
+
+    .action-preview,
+    .action-show {
+        #attachment-list.attachmentslist li {
+            border-color: @color-dark-border;
+            background: lighten(@color-dark-background, 3%);
+
+            &:before { background: #1d3a31; color: #cfe3d8; }
+            &.pdf:before { background: #4a2c1f; color: #f3c3a6; }
+            &.image:before, &.jpg:before, &.jpeg:before, &.png:before { background: #173b40; color: #bfe0e5; }
+            &.zip:before, &.rar:before, &.gz:before { background: #45391b; color: #ecd9a6; }
+
+            a.filename {
+                color: @color-dark-font;
+
+                .attachment-size {
+                    color: @color-dark-hint;
+                }
+            }
+        }
+    }
+}
+
+// Settings: the avatar section (plugins/team_gene_avatar) gets its own icon.
+.listing.iconized tr.gene_avatar > td.section:before {
+    .font-icon-regular(@fa-var-user-circle);
+}
+
+/*** Compose ***/
+
+// Rounded fields, an editor card and a clear send button; the attachment
+// drop area uses the brand tint instead of a grey dashed box.
+.action-compose {
+    #compose-headers .input-group {
+        > .form-control:first-child,
+        > .custom-select:first-child,
+        > ul.form-control:first-child {
+            border-top-left-radius: .6rem;
+            border-bottom-left-radius: .6rem;
+        }
+
+        > :last-child,
+        > .input-group-append:last-child > :last-child {
+            border-top-right-radius: .6rem;
+            border-bottom-right-radius: .6rem;
+        }
+    }
+
+    #compose-headers input.form-control {
+        border-radius: .6rem;
+    }
+
+    .html-editor,
+    #composebody {
+        border-radius: .75rem;
+    }
+
+    .html-editor .editor-toolbar {
+        border-radius: .75rem .75rem 0 0;
+        background-color: @color-layout-header-background;
+    }
+
+    .formbuttons button.send {
+        padding: .55rem 1.6rem;
+        border-radius: 999px;
+        letter-spacing: .08em;
+        box-shadow: 0 10px 22px -12px fade(@color-main-dark, 55%);
+    }
+
+    .file-upload {
+        border: 1.5px dashed darken(@color-border, 8%);
+        border-radius: 1rem;
+        background: fade(#e3ece6, 35%);
+
+        .upload-form button.attach {
+            border-radius: 999px;
+            padding-left: 1.1rem;
+            padding-right: 1.1rem;
+            background: @color-layout-content-background;
+            border: 1px solid @color-main;
+            color: @color-main;
+
+            &:hover,
+            &:focus {
+                background: @color-main;
+                color: #fff;
+            }
+        }
+
+        &.droptarget.hover,
+        &.droptarget.active {
+            border-color: @color-link;
+            background-color: fade(#f4e4d8, 60%);
+        }
+    }
+}
+
+html.dark-mode .action-compose {
+    .file-upload {
+        border-color: @color-dark-border;
+        background: fade(#1d3a31, 35%);
+
+        .upload-form button.attach {
+            background: transparent;
+            border-color: @color-taskmenu-button-action;
+            color: @color-taskmenu-button-action;
+
+            &:hover,
+            &:focus {
+                background: @color-dark-main;
+                border-color: @color-dark-main;
+                color: #fff;
+            }
+        }
+    }
+
+    .html-editor .editor-toolbar {
+        background-color: lighten(@color-dark-background, 3%);
+    }
+}
+
+// Inline image attachments under a message: a rounded card.
+.action-preview,
+.action-show {
+    .image-attachment {
+        border-radius: .9rem;
+        border-color: @color-attachmentlist-border;
+        background: @color-layout-content-background;
+
+        img {
+            border-radius: .5rem;
+        }
+    }
+}

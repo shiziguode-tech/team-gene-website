@@ -1,0 +1,86 @@
+/**
+ * Team Gene theme for the Elastic skin — variable overrides.
+ *
+ * Loaded through Elastic's own hook at the end of variables.less
+ * (`@import (reference, optional) "_variables"`), so no upstream file is edited.
+ * Palette matches public/redesign/site.css: forest green, clay, warm paper.
+ * Rebuild with: node scripts/build-webmail-skin.mjs
+ */
+
+// Brand
+@color-main:                #1e4d41;   // forest
+@color-main-dark:           #0f2b24;   // forest-deep
+@color-black:               #14231e;
+@color-font:                #1d2f29;   // ink
+@color-link:                #a8522f;   // clay (AA on white and paper)
+@color-link-hover:          #8a4124;
+@color-border:              #e1ded4;
+@color-error:               #c0452a;
+@color-success:             #3f9b6f;
+@color-warning:             #e0a33a;
+
+@color-black-shade-text:    #5f6f67;
+@color-black-shade-border:  #e1ded4;
+@color-black-shade-bg:      #efece3;
+
+// Layout: warm paper chrome around white reading surfaces
+@color-layout-sidebar-background:   #faf8f3;
+@color-layout-list-background:      #fffefb;
+@color-layout-content-background:   #fffefb;
+@color-layout-header-background:    #f7f5ef;
+@color-layout-footer-background:    #fffefb;
+
+// Task menu: the deep forest rail, clay-peach for “compose”
+@color-taskmenu-background:                     #0f2b24;
+@color-taskmenu-button:                         #d9e2dc;
+@color-taskmenu-button-selected:                #fff;
+@color-taskmenu-button-action:                  #e9a882;
+@color-taskmenu-button-selected-background:     #1d4a3e;
+@color-taskmenu-button-hover:                   #fff;
+@color-taskmenu-button-selected-hover:          #fff;
+@color-taskmenu-button-action-hover:            #f3c3a6;
+@color-taskmenu-button-background-hover:        #173b32;
+@color-taskmenu-button-logout:                  #e39371;
+@color-taskmenu-button-logout-hover:            #f0b096;
+
+// Toolbar & search
+@color-toolbar-button-background-hover: #ece8de;
+@color-searchbar-background:            #fbfaf6;
+
+// Listings
+@color-list-selected-background:    #e3ece6;
+@color-list-droptarget-background:  #f4e4d8;
+@color-list-focus-indicator:        #a8522f;
+@color-list-border:                 #f0ede5;
+@color-list-recent:                 #a8522f;
+@color-list-recent-badge-background: #b35a34;
+
+@color-attachmentlist-border:       #ece9e0;
+@color-attachmentlist-background:   #fbfaf6;
+@color-messagepart-border:          #ece9e0;
+@color-messagepart-background:      #fbfaf6;
+@color-image-upload-background:     #efece3;
+
+// Popovers & forms
+@color-popover-mobile-dropbutton-background: #f3f1ea;
+@color-input-border:                #d3d3c8;
+@color-input-placeholder:           #9aa39d;
+@color-btn-secondary-background:    #6b7b73;
+@color-btn-primary-background:      @color-main;
+
+// Dark mode (html.dark-mode) — matches the site's dark forest palette
+@color-dark-main:                       #2b6655;
+@color-dark-background:                 #0f1a16;
+@color-dark-font:                       #d5e0da;
+@color-dark-border:                     #2c3d37;
+@color-dark-information:                #2b6655;
+@color-dark-list-selected:              #f3efe4;
+@color-dark-list-selected-background:   #1d3a31;
+@color-dark-list-border:                #1a2823;
+@color-dark-list-droptarget-background: #4a2c1f;
+@color-dark-input-border:               #4a615a;
+@color-dark-input-addon-background:     #1d3a31;
+@color-dark-popover-background:         #0b1411;
+@color-dark-popover-border:             #2c3d37;
+@color-dark-scrollbar-thumb:            #3a5048;
+@color-dark-scrollbar-track:            #0f1a16;

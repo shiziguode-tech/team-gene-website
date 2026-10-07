@@ -1,0 +1,14 @@
+[
+  {
+    "path": "LICENSES/sources/roundcubemail-1.6.18.tar.gz",
+    "source": "https://codeload.github.com/roundcube/roundcubemail/tar.gz/refs/tags/1.6.18",
+    "sha256": "7c0c79a2294e402f762ea9d3fafaeaa683f13ce7792c52245fb970836a81f818",
+    "bytes": 4043101
+  },
+  {
+    "path": "LICENSES/sources/tinymce-5.10.9.tar.gz",
+    "source": "https://codeload.github.com/tinymce/tinymce/tar.gz/refs/tags/5.10.9",
+    "sha256": "c7c0cb3a72cbd4fab0a8cac642c8302df93f510863f785df069681280de8e6ad",
+    "bytes": 3543623
+  }
+]

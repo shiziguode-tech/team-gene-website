@@ -1,0 +1,10 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '../vendor/shadcn-tailwind-4.13.0.css';
+
+/* Loaded only by app/admin/layout.tsx. Tailwind stays for the shadcn dialog used
+   by the admin session guard; all page styling comes from
+   public/redesign/{site,admin}.css. The shadcn tokens point at the shared design
+   tokens so the dialog follows the same palette and the light/dark theme. */
+:root{--background:var(--surface,#fffdf9);--foreground:var(--ink,#14322a);--card:var(--surface,#fffdf9);--card-foreground:var(--ink,#14322a);--popover:var(--surface,#fffdf9);--popover-foreground:var(--ink,#14322a);--primary:var(--forest,#163f35);--primary-foreground:#fff;--secondary:var(--sage,#e7ece4);--secondary-foreground:var(--ink,#14322a);--muted:var(--sage,#e7ece4);--muted-foreground:var(--ink-3,#5f6f67);--accent:var(--sage,#e7ece4);--accent-foreground:var(--ink,#14322a);--destructive:#c0452a;--border:var(--line,rgba(20,50,42,.11));--input:var(--line-2,rgba(20,50,42,.2));--ring:var(--clay,#a8522f)}
+@theme inline{--color-background:var(--background);--color-foreground:var(--foreground);--color-primary:var(--primary);--color-primary-foreground:var(--primary-foreground);--color-muted:var(--muted);--color-muted-foreground:var(--muted-foreground);--color-accent:var(--accent);--color-accent-foreground:var(--accent-foreground);--color-border:var(--border);--color-input:var(--input);--color-ring:var(--ring);--color-popover:var(--popover);--color-popover-foreground:var(--popover-foreground);--color-destructive:var(--destructive);--color-secondary:var(--secondary);--color-secondary-foreground:var(--secondary-foreground)}
