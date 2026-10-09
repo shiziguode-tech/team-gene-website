@@ -1,6 +1,7 @@
 /* Team Gene — interactions. No dependencies. */
 import {createTransitionRunner} from './transitions.js';
 import {initializeLightbox} from './lightbox.js';
+import {initializeHeroNetwork} from './hero-network.js';
 
 export function syncHeaderVisibility(header, root, {y, lastY, menuOpen, focused}) {
   if (menuOpen || focused) header.classList.remove('is-hidden');
@@ -234,142 +235,9 @@ export default function initializeRedesign() {
       }, 2200);
     }
     const canvas = $('.hero__canvas', heroEl);
-    if (canvas) helix(canvas, heroEl);
+    if (canvas) initializeHeroNetwork(canvas, heroEl, { reduced, listen, observe, requestAnimationFrame, cancelAnimationFrame, cleanups });
   } else {
     root.classList.add('is-ready');
-  }
-
-  /* DNA double helix, rendered as a point cloud with base-pair rungs and a few
-     drifting "neurons" that link to nearby nodes. Pauses offscreen. */
-  function helix(canvas, host) {
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    let w = 0, h = 0, dpr = 1;
-    const N = 56;                 // base pairs
-    const TURNS = 2.6;
-    const cream = (a) => `rgba(243,239,228,${a})`;
-    const clay = (a) => `rgba(233,158,120,${a})`;
-    const sage = (a) => `rgba(156,195,176,${a})`;
-    const motes = Array.from({ length: 34 }, () => ({
-      x: Math.random(), y: Math.random(), vx: (Math.random() - .5) * .00018, vy: -(.00008 + Math.random() * .00022), r: .6 + Math.random() * 1.4,
-    }));
-    let pointerX = 0.5, pointerY = 0.5, tiltX = 0, tiltY = 0;
-    let running = false, raf = 0, t0 = performance.now();
-
-    const resize = () => {
-      const r = canvas.getBoundingClientRect();
-      dpr = Math.min(devicePixelRatio || 1, 2);
-      w = r.width; h = r.height;
-      canvas.width = Math.round(w * dpr);
-      canvas.height = Math.round(h * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      if (!running) draw(performance.now());
-    };
-
-    const draw = (now) => {
-      const t = (now - t0) / 1000;
-      const grow = reduced ? 1 : 1 - Math.pow(1 - Math.min(1, t / 2.2), 3);
-      tiltX += (pointerX - .5 - tiltX) * .04;
-      tiltY += (pointerY - .5 - tiltY) * .04;
-
-      ctx.clearRect(0, 0, w, h);
-      const narrow = w < 520;
-      const cx = w * (narrow ? .5 : .52) + tiltX * 30;
-      const cy = h * .5 + tiltY * 20;
-      const R = Math.min(w * .26, 150) * grow;
-      const L = Math.min(h * 1.05, 1000);
-      const ang = -0.42 + tiltX * .18;
-      const ca = Math.cos(ang), sa = Math.sin(ang);
-      const spin = t * .32;
-
-      const A = [], B = [];
-      for (let i = 0; i < N; i++) {
-        const u = i / (N - 1);
-        const s = (u - .5) * L;
-        const ph = u * TURNS * Math.PI * 2 + spin;
-        for (const [arr, off] of [[A, 0], [B, Math.PI]]) {
-          const lx = R * Math.cos(ph + off);
-          const z = Math.sin(ph + off);
-          arr.push({ x: cx + lx * ca - s * sa, y: cy + lx * sa + s * ca, z, a: off === 0 });
-        }
-      }
-
-      // Rungs (base pairs)
-      ctx.lineWidth = 1;
-      for (let i = 0; i < N; i += 2) {
-        const a = A[i], b = B[i];
-        const depth = (a.z + b.z + 2) / 4;
-        const g = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
-        g.addColorStop(0, cream(.05 + depth * .22));
-        g.addColorStop(1, clay(.05 + depth * .26));
-        ctx.strokeStyle = g;
-        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-      }
-      // Backbones
-      for (const [arr, col] of [[A, cream], [B, clay]]) {
-        for (let i = 1; i < arr.length; i++) {
-          const p = arr[i - 1], q = arr[i];
-          ctx.strokeStyle = col(.08 + ((p.z + q.z + 2) / 4) * .4);
-          ctx.lineWidth = .6 + ((p.z + 1) / 2) * 1.1;
-          ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
-        }
-      }
-
-      // Motes + synapses
-      const nodes = A.concat(B);
-      for (const m of motes) {
-        if (!reduced && running) {
-          m.x += m.vx; m.y += m.vy;
-          if (m.y < -.05) { m.y = 1.05; m.x = Math.random(); }
-          if (m.x < -.05) m.x = 1.05; else if (m.x > 1.05) m.x = -.05;
-        }
-        const mx = m.x * w, my = m.y * h;
-        for (let k = 0; k < nodes.length; k += 3) {
-          const n = nodes[k];
-          const dx = n.x - mx, dy = n.y - my;
-          const d2 = dx * dx + dy * dy;
-          if (d2 < 7000) {
-            ctx.strokeStyle = sage((1 - d2 / 7000) * .28 * grow);
-            ctx.lineWidth = .7;
-            ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(n.x, n.y); ctx.stroke();
-          }
-        }
-        ctx.fillStyle = sage(.5);
-        ctx.beginPath(); ctx.arc(mx, my, m.r, 0, Math.PI * 2); ctx.fill();
-      }
-
-      // Nodes, back to front
-      nodes.sort((p, q) => p.z - q.z);
-      for (const n of nodes) {
-        const depth = (n.z + 1) / 2;
-        const r = (1.2 + depth * 2.6) * (0.6 + grow * .4);
-        ctx.fillStyle = n.a ? cream(.18 + depth * .8) : clay(.2 + depth * .8);
-        ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, Math.PI * 2); ctx.fill();
-        if (depth > .86) {
-          ctx.fillStyle = n.a ? cream(.08) : clay(.1);
-          ctx.beginPath(); ctx.arc(n.x, n.y, r * 3.2, 0, Math.PI * 2); ctx.fill();
-        }
-      }
-    };
-
-    const loop = (now) => { draw(now); if (running) raf = requestAnimationFrame(loop); };
-    const start = () => { if (running || reduced) return; running = true; raf = requestAnimationFrame(loop); };
-    const stop = () => { running = false; cancelAnimationFrame(raf); };
-
-    let onScreen = false;
-    const syncAnimation = () => (!document.hidden && onScreen ? start() : stop());
-    observe('ResizeObserver', resize).observe(canvas);
-    observe('IntersectionObserver', ([en]) => { onScreen = en.isIntersecting; syncAnimation(); }).observe(host);
-    listen(document, 'visibilitychange', syncAnimation);
-    cleanups.push(stop);
-    listen(host, 'pointermove', (e) => {
-      const r = host.getBoundingClientRect();
-      pointerX = (e.clientX - r.left) / r.width;
-      pointerY = (e.clientY - r.top) / r.height;
-    });
-    listen(host, 'pointerleave', () => { pointerX = .5; pointerY = .5; });
-    resize();
-    if (reduced) draw(t0 + 10000);
   }
 
   /* ---------- Alumni directory ---------- */
