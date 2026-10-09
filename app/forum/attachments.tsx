@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { ChevronLeft, ChevronRight, ExternalLink, ImagePlus, Play, Check, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, ImageOff, ImagePlus, Play, Check, X } from 'lucide-react';
 import { FORUM_MEDIA_MAX_BYTES, mediaMaxBytes } from '@/lib/upload-limits.js';
 import type { MediaAsset } from '@/lib/content';
 import type { DraftMedia, UploadProgress } from './upload';
@@ -55,17 +55,22 @@ export function AttachmentPreviews({ items, onChange, disabled }: { items: Draft
 
 export function MediaGallery({ media }: { media: MediaAsset[] }) {
   const [open, setOpen] = useState<string | null>(null);
+  // Files removed from the server (a deleted post, a retired account) show a
+  // quiet placeholder instead of the browser's broken-image icon.
+  const [missing, setMissing] = useState<Set<string>>(() => new Set());
   if (!media.length) return null;
   const images = media.filter(asset => asset.type === 'image');
+  const lose = (key: string) => setMissing(current => current.has(key) ? current : new Set(current).add(key));
   const openIndex = images.findIndex(asset => asset.key === open);
   // Keep natural proportions, but let narrow/mobile feeds download a smaller
   // rendition. The lightbox and original link remain available at full size.
   const single = media.length === 1;
   return <div className={'forum-gallery count-' + Math.min(media.length, 4)}>
     {media.map(asset => <div className={'forum-gallery__item is-' + asset.type} key={asset.key}>
-      {asset.type === 'image'
-        ? <button type="button" onClick={() => setOpen(asset.key)} aria-label={`查看图片 ${asset.name}`}><img src={variantUrl(asset, single ? 960 : 640)} srcSet={single ? singleSrcSet(asset) : gridSrcSet(asset)} sizes={single ? '(min-width: 1025px) 720px, calc(100vw - 66px)' : '(min-width: 700px) 340px, 50vw'} alt={asset.name} loading="lazy" decoding="async"/></button>
-        : <VideoAttachment asset={asset}/>}
+      {missing.has(asset.key) ? <MissingAttachment asset={asset}/>
+        : asset.type === 'image'
+        ? <button type="button" onClick={() => setOpen(asset.key)} aria-label={`查看图片 ${asset.name}`}><img src={variantUrl(asset, single ? 960 : 640)} srcSet={single ? singleSrcSet(asset) : gridSrcSet(asset)} sizes={single ? '(min-width: 1025px) 720px, calc(100vw - 66px)' : '(min-width: 700px) 340px, 50vw'} alt={asset.name} loading="lazy" decoding="async" onError={() => lose(asset.key)}/></button>
+        : <VideoAttachment asset={asset} onMissing={() => lose(asset.key)}/>}
     </div>)}
     {openIndex >= 0 && <Lightbox images={images} index={openIndex} onIndex={index=>setOpen(images[index].key)} onClose={() => setOpen(null)}/>}
   </div>;
@@ -79,7 +84,13 @@ type NetworkInformation = { saveData?: boolean; effectiveType?: string };
 // visitor plays it. Mouse/keyboard devices on an unmetered connection also
 // fetch the metadata near the viewport to show the real first frame behind the
 // button; touch screens and data-saver connections download nothing first.
-function VideoAttachment({ asset }: { asset: MediaAsset }) {
+function MissingAttachment({ asset }: { asset: MediaAsset }) {
+  return <div className="forum-missing" role="img" aria-label={`${asset.type === 'image' ? '图片' : '视频'}已失效：${asset.name}`}>
+    <ImageOff size={20} aria-hidden="true"/><strong>{asset.type === 'image' ? '图片' : '视频'}已失效</strong><small>{asset.name}</small>
+  </div>;
+}
+
+function VideoAttachment({ asset, onMissing }: { asset: MediaAsset; onMissing: () => void }) {
   const video = useRef<HTMLVideoElement>(null);
   const [started, setStarted] = useState(false);
   const [frame, setFrame] = useState(false);
@@ -108,7 +119,7 @@ function VideoAttachment({ asset }: { asset: MediaAsset }) {
     void node.play().catch(() => {});
   }
   return <>
-    <video ref={video} controls={started} preload="none" playsInline aria-label={asset.name}
+    <video ref={video} controls={started} preload="none" playsInline aria-label={asset.name} onError={onMissing}
       onLoadedMetadata={event => setDuration(event.currentTarget.duration)} onLoadedData={() => setFrame(true)}/>
     {!started && <button type="button" className={'forum-video-cover' + (frame ? ' has-frame' : '')} onClick={play} aria-label={`播放视频 ${asset.name}`}>
       <span className="forum-video-cover__play" aria-hidden="true"><Play size={22}/></span>

@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {MAPS, OUTPUTS, PATH, STEP_SECONDS, featureMaps, fieldAt, initializeHeroNetwork, predictedClass, receptiveField} from '../public/redesign/hero-network.js';
+import {MAPS, OUTPUTS, PATH, STEP_SECONDS, featureMaps, fieldAt, fitFrame, initializeHeroNetwork, predictedClass, predictionAt, receptiveField, restingPoints} from '../public/redesign/hero-network.js';
 
 test('feature maps form a valid 2×2 convolution chain with fixed activations',()=>{
   MAPS.slice(1).forEach((g,l)=>assert.equal(g,MAPS[l]-1,'each map is one unit smaller'));
@@ -29,6 +29,33 @@ test('the field slides smoothly between path positions and ping-pongs without ju
     if(now.since>=0)assert.deepEqual([now.a,now.b],now.to,'settled on a path position');
     prev=now;
   }
+});
+
+test('no output is lit until the first forward pass reaches it; later predictions fade only while the field moves',()=>{
+  const firstSettle=.4*STEP_SECONDS;
+  for(let t=-2;t<firstSettle+MAPS.length*.1;t+=.01)assert.equal(predictionAt(t).glow,0,`dark at ${t.toFixed(2)}s`);
+  const lit=predictionAt(firstSettle+MAPS.length*.1+.3);
+  assert.ok(lit.glow>.99);assert.equal(lit.winner,predictedClass(PATH[1]));
+  const moving=predictionAt(STEP_SECONDS+.1);
+  assert.ok(moving.glow>0&&moving.glow<1,'the previous prediction fades out');assert.equal(moving.winner,predictedClass(PATH[1]));
+  assert.equal(predictionAt(STEP_SECONDS+.5).glow,0);
+});
+
+test('the network fits beside the hero text and is never mirrored, even when the text leaves no room',()=>{
+  const inside=(points,[x0,x1,y0,y1])=>points.every(p=>p.x>=x0-.5&&p.x<=x1+.5&&p.y>=y0-.5&&p.y<=y1+.5);
+  // Canvas sizes of the 1024–1920 px layouts, the measured free space beside the text, and text wider than the canvas.
+  for(const [w,h,left,right] of [[573,860,177,562],[717,860,205,693],[806,860,62,746],[1075,1080,230,1000],[806,860,900,746],[600,860,2000,580]]){
+    const frame=fitFrame(w,h,left,right);
+    assert.ok(frame.S>0&&frame.H>0&&frame.F>0,`${w}×${h} has a positive size`);
+    const {maps,outputs}=restingPoints(frame);
+    const all=[...maps.flat(),...outputs];
+    const room=Math.max(0,Math.min(left,right-Math.min(right,240)));
+    assert.ok(inside(all,[room,right,h*.18,h*.82]),`${w}×${h} stays inside its space`);
+    const inputX=maps[0].reduce((sum,p)=>sum+p.x,0)/4;
+    for(const o of outputs)assert.ok(o.x>inputX,'outputs stay to the right of the input map');
+  }
+  const narrow=fitFrame(390,800);
+  assert.ok(narrow.narrow&&narrow.S>0&&narrow.H>0);
 });
 
 function harness({reduced}){

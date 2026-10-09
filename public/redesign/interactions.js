@@ -80,7 +80,8 @@ export default function initializeRedesign() {
   /* ---------- Images: fade in when decoded, fall back to initials on error ---------- */
   $$('.frame img').forEach((img) => {
     const done = () => img.classList.add('is-loaded');
-    const fail = () => img.classList.add('is-broken');
+    // A photo that cannot load falls back to the same monogram as a missing one.
+    const fail = () => { img.classList.add('is-broken'); img.closest('.frame')?.classList.add('frame--empty'); };
     if (img.complete) (img.naturalWidth ? done() : fail());
     else { listen(img, 'load', done, { once: true }); listen(img, 'error', fail, { once: true }); }
   });

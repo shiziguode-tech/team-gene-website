@@ -166,8 +166,12 @@ test('forum shares file limits and accepts up to 1 GiB attachment metadata',asyn
   const bytes=Buffer.alloc(13*1024*1024);png.copy(bytes);
   const uploaded=await fetch(origin+'/api/forum/media',{method:'POST',headers:{Origin:origin,Cookie:forumCookie,'Content-Type':'image/png'},body:bytes});assert.equal(uploaded.status,200);
   const image=(await uploaded.json()).asset;
-  const video=size=>({key:randomUUID()+'.mp4',name:'video.mp4',type:'video',mime:'video/mp4',size});
+  // Attachments must be the member's own recorded uploads; record large videos directly.
+  const own=db2=>asset=>{db2.prepare('INSERT INTO forum_uploads(key,email,name,type,mime,size,created_at,complete) VALUES(?,?,?,?,?,?,?,1)').run(asset.key,email,asset.name,asset.type,asset.mime,asset.size,Date.now());return asset;};
+  const ledger=new DatabaseSync(join(directory,'content.sqlite'));
+  const video=size=>own(ledger)({key:randomUUID()+'.mp4',name:'video.mp4',type:'video',mime:'video/mp4',size});
   const data={body:'File limit test',media:[video(500*1024*1024),video(500*1024*1024),video(24*1024*1024)]};
+  ledger.close();
   assert.equal((await request('/api/forum/posts','POST',data,{Cookie:forumCookie})).status,200);
   data.media[2].size+=1;assert.equal((await request('/api/forum/posts','POST',data,{Cookie:forumCookie})).status,400);
   assert.equal((await request('/api/forum/posts','POST',{body:'Oversize',media:[{...image,size:50*1024*1024+1}]},{Cookie:forumCookie})).status,400);
@@ -235,6 +239,72 @@ test('comment photos/videos persist in feed and SQLite; empty/invalid/unauthenti
   db.close();
 });
 
+
+async function forumMember(name){
+  await request('/api/forum/posts');
+  const token=randomBytes(32).toString('base64url'),email=`${name}-${randomUUID().slice(0,8)}@example.invalid`;
+  const db=new DatabaseSync(join(directory,'content.sqlite'));
+  db.prepare('INSERT INTO forum_profiles(email,display_name,created_at) VALUES(?,?,?)').run(email,name,Date.now());
+  db.prepare('INSERT INTO forum_sessions(token_hash,email,expires_at) VALUES(?,?,?)').run(createHash('sha256').update(token).digest('hex'),email,Date.now()+600000);
+  db.close();
+  const headers={Cookie:'gene_forum='+token};
+  const upload=async(name='photo.png')=>{const response=await fetch(origin+'/api/forum/media',{method:'POST',headers:{Origin:origin,...headers,'Content-Type':'image/png','X-File-Name':encodeURIComponent(name)},body:png});return {status:response.status,asset:(await response.json()).asset};};
+  return {email,headers,upload};
+}
+
+test('forum attachments must be the member\'s own finished uploads, as the server recorded them',async()=>{
+  const a=await forumMember('owner-a'),b=await forumMember('owner-b');
+  const mine=(await a.upload('我的照片.png')).asset,theirs=(await b.upload()).asset;
+  const ghost={key:randomUUID()+'.png',name:'ghost.png',type:'image',mime:'image/png',size:png.length};
+  const website=await upload();
+  for(const media of [[theirs],[ghost],[website],[mine,mine]]){
+    const response=await request('/api/forum/posts','POST',{body:'not mine',media},a.headers);
+    assert.equal(response.status,400);assert.equal((await response.json()).code,'media');
+  }
+  const post=await request('/api/forum/posts','POST',{body:'mine',media:[{...mine,name:'renamed-by-client.png'}]},a.headers);
+  assert.equal(post.status,200);assert.deepEqual((await post.json()).post.media,[mine],'the recorded name is kept');
+  const comment=await request(`/api/forum/posts/${(await (await request('/api/forum/posts')).json()).posts[0].id}/comments`,'POST',{media:[theirs]},a.headers);
+  assert.equal(comment.status,400);
+  assert.equal((await request('/api/media?key='+website.key,'DELETE')).status,200);
+});
+
+test('deleting a forum post removes its photos, unless website content still shows them',async()=>{
+  const a=await forumMember('cleanup');
+  const only=(await a.upload()).asset,shared=(await a.upload()).asset,reply=(await a.upload()).asset;
+  const created=await request('/api/forum/posts','POST',{body:'to delete',media:[only,shared]},a.headers);
+  const {post}=await created.json();
+  assert.equal((await request(`/api/forum/posts/${post.id}/comments`,'POST',{media:[reply]},a.headers)).status,200);
+  const entry={...record(),media:[shared]};
+  assert.equal((await request('/api/content','POST',entry)).status,200);
+  assert.equal((await request('/api/forum/posts/'+post.id,'DELETE',undefined,a.headers)).status,200);
+  assert.equal((await request('/api/media/'+only.key)).status,404,'the post photo is gone');
+  assert.equal((await request('/api/media/'+reply.key)).status,404,'comment photos go with the post');
+  const ledger=new DatabaseSync(join(directory,'content.sqlite'));
+  assert.equal(ledger.prepare('SELECT COUNT(*) AS n FROM forum_uploads WHERE email=?').get(a.email).n,3,'deleting attachments does not refund daily upload allowance');
+  assert.equal(ledger.prepare('SELECT complete FROM forum_uploads WHERE key=?').get(only.key).complete,-1);
+  ledger.close();
+  const retry=await request('/api/forum/posts','POST',{media:[only]},a.headers);
+  assert.equal(retry.status,400,'removed attachments cannot be attached again');
+  assert.equal((await retry.json()).code,'media');
+
+  assert.equal((await request('/api/media/'+shared.key)).status,200,'website content keeps its copy');
+  const saved=(await (await request('/api/content')).json()).entries.find(item=>item.id===entry.id);
+  assert.equal((await request('/api/content','DELETE',saved)).status,200);
+  assert.equal((await request('/api/media/'+shared.key)).status,404,'removed once nothing shows it');
+});
+
+test('forum posting limits count deleted posts, and uploads have a daily allowance',async()=>{
+  const a=await forumMember('limits');
+  for(let i=0;i<12;i++){
+    const response=await request('/api/forum/posts','POST',{body:'post '+i},a.headers);assert.equal(response.status,200);
+    assert.equal((await request('/api/forum/posts/'+(await response.json()).post.id,'DELETE',undefined,a.headers)).status,200);
+  }
+  assert.equal((await request('/api/forum/posts','POST',{body:'one more'},a.headers)).status,429);
+  const b=await forumMember('quota');
+  let accepted=0,last;
+  for(let i=0;i<121;i++){last=await b.upload();if(last.status===200)accepted++;}
+  assert.equal(accepted,120);assert.equal(last.status,429);
+});
 
 test('avatars are validated and normalized; mailbox/forum changes share one account and cannot affect another',async()=>{
   await request('/api/forum/posts');

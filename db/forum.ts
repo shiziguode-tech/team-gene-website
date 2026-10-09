@@ -47,6 +47,19 @@ export function forumDb() {
       created_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS forum_auth_attempts_ip ON forum_auth_attempts(ip_hash, created_at);
+    -- Who uploaded each forum attachment, as the server recorded it (db/forum-uploads.ts).
+    CREATE TABLE IF NOT EXISTS forum_uploads (
+      key TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      name TEXT NOT NULL DEFAULT '',
+      type TEXT NOT NULL DEFAULT '',
+      mime TEXT NOT NULL DEFAULT '',
+      size INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      complete INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS forum_uploads_owner ON forum_uploads(email, created_at);
+    CREATE INDEX IF NOT EXISTS forum_uploads_time ON forum_uploads(created_at);
   `);
   const columns = db.prepare('PRAGMA table_info(forum_comments)').all() as { name: string }[];
   if (!columns.some(column => column.name === 'media_json')) {
@@ -123,7 +136,7 @@ export function retireForumIdentity(address: string) {
   db.exec('BEGIN IMMEDIATE');
   try {
     db.prepare('DELETE FROM forum_sessions WHERE email=?').run(email);
-    for (const table of ['forum_profiles', 'forum_posts', 'forum_comments', 'account_avatars']) {
+    for (const table of ['forum_profiles', 'forum_posts', 'forum_comments', 'forum_uploads', 'account_avatars']) {
       db.prepare(`UPDATE ${table} SET email=? WHERE email=?`).run(archived, email);
     }
     db.exec('COMMIT');

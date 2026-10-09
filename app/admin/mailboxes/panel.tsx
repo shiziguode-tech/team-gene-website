@@ -165,10 +165,10 @@ export default function AdminMailboxes() {
           <button className="btn btn--ghost btn--sm" type="button" disabled={loading||busy} onClick={()=>{setLoading(true);setError('');void load()}}><RefreshCw size={15} className={loading ? 'is-spinning' : ''}/>刷新</button>
         </div>
 
-        {notice&&<p className="admin-notice" role="status">{notice}</p>}{error&&<p className="admin-alert" role="alert">{error}</p>}
+        {notice&&<p className="admin-notice" role="status">{notice}</p>}{error&&!(loadFailed&&mailboxes.length===0)&&<p className="admin-alert" role="alert">{error}</p>}
 
         {loading ? <ul className="admin-list" aria-busy="true" aria-label="正在读取邮箱账户">{[0, 1, 2, 3].map(i => <li className="admin-row is-skeleton" key={i}><span/><span/><span/></li>)}</ul>
-          : loadFailed && mailboxes.length === 0 ? <div className="card admin-empty"><RefreshCw size={28}/><h3>暂时无法读取邮箱账户</h3><p>邮件服务可用后，点击“刷新”重新读取。</p></div>
+          : loadFailed && mailboxes.length === 0 ? <div className="card admin-empty" role="alert"><RefreshCw size={28}/><h3>暂时无法读取邮箱账户</h3><p>{error||'邮箱服务暂时无法响应。'}邮件服务可用后，点击“刷新”重新读取。</p></div>
           : mailboxes.length === 0 ? <div className="card admin-empty"><Mail size={28}/><h3>目前还没有已注册的邮箱账户</h3><p>成员在邮箱入口申领后会显示在这里。</p></div>
           : visible.length === 0 ? <div className="card admin-empty"><Search size={28}/><h3>没有匹配的邮箱</h3><p>换个关键词试试。</p><button type="button" className="btn btn--ghost btn--sm" onClick={() => setQuery('')}>清除搜索</button></div>
           : <ul className="admin-list">{visible.map(box => {

@@ -510,6 +510,32 @@ p { text-wrap: pretty; }
 }
 .frame img.is-loaded { opacity: 1; }
 .frame img.is-broken { display: none; }
+/* No photo yet: the monogram tones of the members page and a faint brand orbit,
+   rather than a flat tile. */
+.frame--empty {
+  --a: #d8e1d5; --b: #eef2ea; --c: #163f35;
+  --orbit: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='%23000' stroke-width='.45'%3E%3Ccircle cx='50' cy='50' r='33'/%3E%3Cellipse cx='50' cy='50' rx='47' ry='15' transform='rotate(-28 50 50)'/%3E%3Ccircle cx='50' cy='50' r='21' stroke-dasharray='1 2.4'/%3E%3C/svg%3E");
+  background: radial-gradient(120% 95% at 28% 12%, var(--b), var(--a));
+}
+.frame--empty.t1 { --a: #f0d6c6; --b: #fbeee5; --c: #8f4222; }
+.frame--empty.t2 { --a: #cfdcd6; --b: #eaf1ed; --c: #1e4d41; }
+.frame--empty.t3 { --a: #e3dcc9; --b: #f6f2e7; --c: #5a4a2b; }
+:root[data-theme="dark"] .frame--empty { --a: #1f3a31; --b: #2a4a3f; --c: #cfe2d7; }
+:root[data-theme="dark"] .frame--empty.t1 { --a: #4a2c1f; --b: #5d3a29; --c: #f2c8b2; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .frame--empty { --a: #1f3a31; --b: #2a4a3f; --c: #cfe2d7; }
+  :root:not([data-theme="light"]) .frame--empty.t1 { --a: #4a2c1f; --b: #5d3a29; --c: #f2c8b2; }
+}
+.frame--empty::before { z-index: 1; color: var(--c); font-weight: 600; letter-spacing: .06em; }
+.frame--empty::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--c);
+  opacity: .14;
+  -webkit-mask: var(--orbit) center / 88% no-repeat;
+  mask: var(--orbit) center / 88% no-repeat;
+}
 html:not(.js) .frame img { opacity: 1; }
 
 /* ---------- Header ---------- */
@@ -1232,7 +1258,8 @@ a:hover > * > .arrow-dot, a:hover > .arrow-dot, .focus-card:hover .arrow-dot {
 .cta__ctas { display: flex; flex-wrap: wrap; gap: 12px; }
 .cta__orbits {
   position: absolute;
-  right: -150px;
+  /* The monogram sits past the buttons, at the card's edge, not behind them. */
+  right: -236px;
   top: 50%;
   z-index: -1;
   width: 420px;
@@ -1246,7 +1273,7 @@ a:hover > * > .arrow-dot, a:hover > .arrow-dot, .focus-card:hover .arrow-dot {
 .cta__orbits ellipse:nth-child(3) { animation: spin 70s linear infinite; }
 .cta__orbits text { font-family: "Instrument Serif", serif; font-style: italic; fill: var(--on-forest-3); }
 @keyframes spin { to { transform: rotate(360deg); } }
-@media (max-width: 820px) { .cta { grid-template-columns: 1fr; } }
+@media (max-width: 820px) { .cta { grid-template-columns: 1fr; } .cta__orbits { top: 0; right: -250px; } }
 
 /* ---------- Footer ---------- */
 .site-footer {
@@ -1580,6 +1607,13 @@ a:hover > * > .arrow-dot, a:hover > .arrow-dot, .focus-card:hover .arrow-dot {
 .empty__art { width: 132px; height: 132px; color: var(--clay); margin-bottom: 6px; }
 .empty__art path, .empty__art circle { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 2.4s var(--ease-in-out) forwards; animation-delay: calc(var(--n, 0) * 70ms + .2s); }
 @keyframes draw { to { stroke-dashoffset: 0; } }
+/* 404: the page fills the screen so the footer does not dominate, with quick ways back in. */
+.lost { min-height: calc(100svh - var(--header-h)); display: grid; align-items: center; }
+.empty__art .is-dotted { stroke-dasharray: .07 .09; stroke-dashoffset: 0; opacity: 0; animation: lost-trail .8s var(--ease-out) .9s forwards; }
+@keyframes lost-trail { to { opacity: .75; } }
+.lost__links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 6px; }
+.lost__links .chip { min-height: 36px; padding: 0 16px; font-size: 13px; color: var(--ink-2); transition: background-color .3s, border-color .3s, color .3s; }
+.lost__links .chip:hover { background: var(--surface); border-color: var(--ink-3); color: var(--ink); }
 
 /* ---------- Alumni profile ---------- */
 .profile {
@@ -1739,7 +1773,13 @@ a:hover > * > .arrow-dot, a:hover > .arrow-dot, .focus-card:hover .arrow-dot {
 }
 .figure__zoom:hover .figure__hint, .figure__zoom:focus-visible .figure__hint { opacity: 1; transform: none; }
 .figure figcaption { display: flex; justify-content: space-between; gap: 12px; padding: 14px 20px; font-size: 13px; color: var(--ink-3); border-top: 1px solid var(--line); }
-.figure figcaption strong { color: var(--ink); font-weight: 500; }
+.figure figcaption strong { flex: none; color: var(--ink); font-weight: 500; }
+.figure figcaption span { min-width: 0; text-align: right; }
+/* Narrow screens: the figure label, then the venue, instead of a squeezed right column. */
+@media (max-width: 600px) {
+  .figure figcaption { flex-direction: column; gap: 2px; padding: 12px 16px; }
+  .figure figcaption span { text-align: left; font-size: 12px; }
+}
 
 .en-prose p { font-size: 17px; line-height: 1.85; color: var(--ink-2); hyphens: auto; text-align: justify; text-justify: inter-word; }
 @media (max-width: 600px) { .en-prose p { text-align: start; } } /* narrow columns: ragged right reads better than word gaps */

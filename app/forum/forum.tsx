@@ -6,7 +6,7 @@ import { AttachButton, AttachmentPreviews, MediaGallery, UploadStatus, addAttach
 import { SiteFooter, SiteHeader, RedesignStyles, Icon, ICONS, WEBMAIL_URL } from '@/components/redesign/chrome';
 import RedesignEffects from '../redesign-effects';
 
-import { useCallback, useEffect, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent, type KeyboardEvent } from 'react';
 import { ArrowDown, ArrowRight, ArrowUpRight, Eye, EyeOff, ImagePlus, LogOut, Mail, MessageCircle, RefreshCw, Send, ShieldCheck, Sparkles, Trash2, Users } from 'lucide-react';
 import type { MediaAsset } from '@/lib/content';
 import { forumMutation } from '@/lib/forum-client';
@@ -30,8 +30,50 @@ function When({ timestamp, now }: { timestamp: number; now: number }) {
   return <time dateTime={new Date(timestamp).toISOString()} title={fullDate(timestamp)}>{relativeTime(timestamp, now)}</time>;
 }
 const draggingFiles = (event: DragEvent) => Array.from(event.dataTransfer.types).includes('Files');
+// A post or comment rejected because its uploads expired re-uploads them on the next try.
+const forgetExpiredUploads = (items: DraftMedia[], result: { code?: string }) => { if (result.code === 'media') items.forEach(item => { item.asset = undefined; }); };
 const feedFailureMessage = (reason: unknown) => reason instanceof Error && !(reason instanceof TypeError) && !(reason instanceof SyntaxError)
   ? reason.message : '论坛动态暂时无法加载，请检查网络后点击“刷新”重试。';
+
+// A reply grows with what is typed (up to a few lines, then scrolls). Enter
+// sends and Shift+Enter starts a new line; Enter that confirms an IME
+// candidate never sends.
+function ReplyField({ id, value, disabled, onChange }: { id: string; value: string; disabled: boolean; onChange: (value: string) => void }) {
+  const field = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const node = field.current;
+    if (!node) return;
+    node.style.height = 'auto';
+    node.style.height = `${Math.min(node.scrollHeight, 168)}px`;
+  }, [value]);
+  return <textarea ref={field} id={id} rows={1} disabled={disabled} value={value} maxLength={1200} placeholder="写下你的评论…" aria-label="评论内容"
+    onChange={event => onChange(event.target.value)}
+    onKeyDown={event => {
+      if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing || event.keyCode === 229) return;
+      event.preventDefault(); event.currentTarget.form?.requestSubmit();
+    }}/>;
+}
+
+// Long posts start folded to eight lines so one essay does not push the rest of
+// the feed away; short ones never show the toggle.
+function PostBody({ text }: { text: string }) {
+  const body = useRef<HTMLParagraphElement>(null);
+  const [open, setOpen] = useState(false);
+  const [long, setLong] = useState(false);
+  useLayoutEffect(() => {
+    const node = body.current;
+    if (!node || open) return;
+    const measure = () => setLong(node.scrollHeight > node.clientHeight + 2);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [text, open]);
+  return <>
+    <p ref={body} className={`forum-post__body${open ? '' : ' is-folded'}`}>{text}</p>
+    {(long || open) && <button type="button" className="forum-post__more" aria-expanded={open} onClick={() => setOpen(value => !value)}>{open ? '收起' : '展开全文'}</button>}
+  </>;
+}
 
 export default function Forum() {
   const [user, setUser] = useState<User | null>(null);
@@ -54,6 +96,9 @@ export default function Forum() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [feedError, setFeedError] = useState('');
+  // Shown beside the reply box or avatar that failed, which may be far from the composer.
+  const [replyError, setReplyError] = useState<{ postId: string; message: string } | null>(null);
+  const [avatarError, setAvatarError] = useState('');
   const [notice, setNotice] = useState('');
   const [now, setNow] = useState(() => Date.now());
   const [commentFiles, setCommentFiles] = useState<Record<string, DraftMedia[]>>({});
@@ -165,8 +210,8 @@ export default function Forum() {
       if (controller.signal.aborted) throw new Error('已取消上传，草稿已保留。');
       setProgress(null); uploadController.current = null;
       const response = await forumMutation('/api/forum/posts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body: draft, media }) }, expireSession);
-      const result = await response.json() as { error?: string };
-      if (!response.ok) throw new Error(result.error || '发布失败。');
+      const result = await response.json() as { error?: string; code?: string };
+      if (!response.ok) { forgetExpiredUploads(files, result); throw new Error(result.error || '发布失败。'); }
       setDraft(''); files.forEach(item => URL.revokeObjectURL(item.url)); setFiles([]); setNotice('动态已发布。'); await loadPosts();
     } catch (reason) { setError(reason instanceof Error ? reason.message : '发布失败，请重试。'); }
     finally { mutationPending.current=false;setBusy(false); setOperation(null); setProgress(null); uploadController.current = null; }
@@ -176,20 +221,20 @@ export default function Forum() {
     const body = (commentDrafts[post.id] || '').trim(); const attachments = commentFiles[post.id] || [];
     if (mutationPending.current || (!body && !attachments.length)) return;
     mutationPending.current=true;++loadVersion.current;
-    setBusy(true); setOperation(post.id); setError(''); setNotice('');
+    setBusy(true); setOperation(post.id); setReplyError(null); setNotice('');
     const controller = new AbortController(); uploadController.current = controller;
     try {
       const media = await uploadAttachments(attachments, controller.signal, setProgress, expireSession);
       if (controller.signal.aborted) throw new Error('已取消上传，草稿已保留。');
       setProgress(null); uploadController.current = null;
       const response = await forumMutation(`/api/forum/posts/${post.id}/comments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body, media }) }, expireSession);
-      const result = await response.json() as { comment?: Comment; error?: string };
-      if (!response.ok || !result.comment) throw new Error(result.error || '评论失败。');
+      const result = await response.json() as { comment?: Comment; error?: string; code?: string };
+      if (!response.ok || !result.comment) { forgetExpiredUploads(attachments, result); throw new Error(result.error || '评论失败。'); }
       setPosts(current => current.map(item => item.id === post.id ? { ...item, comments: [...item.comments, result.comment!] } : item));
       setCommentDrafts(current => ({ ...current, [post.id]: '' }));
       attachments.forEach(item => URL.revokeObjectURL(item.url));
       setCommentFiles(current => ({ ...current, [post.id]: [] }));
-    } catch (reason) { setError(reason instanceof Error ? reason.message : '评论失败，请重试。'); }
+    } catch (reason) { setReplyError({ postId: post.id, message: reason instanceof Error ? reason.message : '评论失败，请重试。' }); }
     finally { mutationPending.current=false;setBusy(false); setOperation(null); setProgress(null); uploadController.current = null; }
   }
 
@@ -334,7 +379,7 @@ export default function Forum() {
                   </div>
                   {post.isOwn && <button type="button" className="forum-icon-btn is-danger" onClick={() => void removePost(post)} disabled={busy} aria-label="删除动态" title="删除动态"><Trash2 size={16}/></button>}
                 </header>
-                {post.body && <p className="forum-post__body">{post.body}</p>}
+                {post.body && <PostBody text={post.body}/>}
                 <MediaGallery media={post.media}/>
                 <div className="forum-post__bar">
                   <button type="button" className="forum-post__action" onClick={() => document.getElementById(`reply-${post.id}`)?.focus()}><MessageCircle size={16}/>{commentLabel(post)}</button>
@@ -352,13 +397,14 @@ export default function Forum() {
                   <Avatar name={user.displayName} url={user.avatarUrl} size="sm"/>
                   <div className="forum-reply__box">
                     <div className="forum-reply__row">
-                      <input id={`reply-${post.id}`} disabled={busy} value={commentDrafts[post.id] || ''} onChange={event => setCommentDrafts(current => ({ ...current, [post.id]: event.target.value }))} maxLength={1200} placeholder="写下你的评论…" aria-label="评论内容"/>
-                      <AttachButton compact items={commentFiles[post.id] || []} onChange={items => setCommentFiles(current => ({ ...current, [post.id]: items }))} onError={setError} disabled={busy}/>
+                      <ReplyField id={`reply-${post.id}`} disabled={busy} value={commentDrafts[post.id] || ''} onChange={value => setCommentDrafts(current => ({ ...current, [post.id]: value }))}/>
+                      <AttachButton compact items={commentFiles[post.id] || []} onChange={items => setCommentFiles(current => ({ ...current, [post.id]: items }))} onError={message => setReplyError(message ? { postId: post.id, message } : null)} disabled={busy}/>
                       <button className="forum-send" disabled={busy || (!(commentDrafts[post.id] || '').trim() && !(commentFiles[post.id] || []).length)}><Send size={15}/><span>{operation === post.id ? '正在发送…' : '评论'}</span></button>
                     </div>
                     <AttachmentPreviews items={commentFiles[post.id] || []} onChange={items => setCommentFiles(current => ({ ...current, [post.id]: items }))} disabled={busy}/>
                     {!!(commentFiles[post.id] || []).length && <small className="forum-hint">{LIMITS}</small>}
                     {operation === post.id && progress && <UploadStatus progress={progress} cancel={() => uploadController.current?.abort()}/>}
+                    {replyError?.postId === post.id && <p className="forum-alert forum-reply__error" role="alert">{replyError.message}</p>}
                   </div>
                 </form> : <p className="forum-guest">登录论坛后即可评论。还没有邮箱？<a href="/mail">先申领一个</a></p>}
               </article>)}</div>}
@@ -367,9 +413,10 @@ export default function Forum() {
 
           <aside className="forum-aside">
             {user ? <section className="card forum-me" id="me" aria-label="我的论坛账户">
-              <AvatarEditor name={user.displayName} url={user.avatarUrl} disabled={busy} onBusy={avatarBusy} onError={setError} onSaved={loadPosts} onExpired={expireSession}/>
+              <AvatarEditor name={user.displayName} url={user.avatarUrl} disabled={busy} onBusy={avatarBusy} onError={setAvatarError} onSaved={loadPosts} onExpired={expireSession}/>
               <div className="forum-me__who"><strong>{user.displayName}</strong><span>{user.email}</span></div>
               <p className="forum-me__note">头像与网页版邮箱同步 · 图片最大 50 MB，自动居中裁剪</p>
+              {avatarError && <p className="forum-alert" role="alert">{avatarError}</p>}
               <div className="forum-me__links">
                 <a className="btn btn--ghost btn--sm" href={WEBMAIL_URL} target="_blank" rel="noreferrer"><Mail size={15}/>网页版邮箱</a>
                 <button className="btn btn--ghost btn--sm" type="button" onClick={() => void signOut()} disabled={busy}><LogOut size={15}/>退出</button>

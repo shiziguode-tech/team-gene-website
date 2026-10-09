@@ -9,7 +9,10 @@ import { prepareAvatar } from '@/lib/avatar-preprocess.js';
 const tone = (name: string) => [...name].reduce((sum, char) => sum + (char.codePointAt(0) || 0), 0) % 4;
 
 export function Avatar({ name, url, size = 'md' }: { name: string; url?: string | null; size?: 'xs' | 'sm' | 'md' | 'lg' }) {
-  return <span className={`forum-avatar is-${size} t${tone(name)}`}>{url ? <img src={url} alt={`${name}的头像`} decoding="async"/> : <span aria-hidden="true">{name.slice(0, 1)}</span>}</span>;
+  // An avatar that fails to load falls back to the initial, like having none.
+  const [failed, setFailed] = useState<string | null>(null);
+  const shown = url && failed !== url ? url : null;
+  return <span className={`forum-avatar is-${size} t${tone(name)}`}>{shown ? <img src={shown} alt={`${name}的头像`} decoding="async" onError={() => setFailed(shown)}/> : <span aria-hidden="true">{name.slice(0, 1)}</span>}</span>;
 }
 
 export function AvatarEditor({ name, url, disabled, onBusy, onSaved, onError, onExpired }: {

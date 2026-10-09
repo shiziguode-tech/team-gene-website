@@ -4,6 +4,7 @@ import { forumDb, forumUserForRequest } from '@/db/forum';
 import { expectedRequestOrigin } from '@/app/admin-access';
 import { commentPage } from '@/db/forum-feed';
 import { readForumCursor } from '@/lib/forum-pagination';
+import { ownForumMedia } from '@/db/forum-uploads';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,9 +33,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if ((!body && !media.length) || body.length > 1200) return Response.json({ error: '请输入评论文字或添加照片、视频，文字最多 1200 字。' }, { status: 400 });
   const db = forumDb();
   if (!db.prepare('SELECT id FROM forum_posts WHERE id=? AND deleted=0').get(postId)) return Response.json({ error: '动态不存在。' }, { status: 404 });
-  const recent = db.prepare('SELECT COUNT(*) AS count FROM forum_comments WHERE email=? AND created_at>? AND deleted=0').get(user.email, Date.now() - 60 * 60 * 1000) as { count: number };
+  const attachments = ownForumMedia(user.email, media);
+  if (!attachments) return Response.json({ error: '附件已失效，请重新添加后再评论。', code: 'media' }, { status: 400 });
+  // Comments removed with their post still count toward the limit.
+  const recent = db.prepare('SELECT COUNT(*) AS count FROM forum_comments WHERE email=? AND created_at>?').get(user.email, Date.now() - 60 * 60 * 1000) as { count: number };
   if (recent.count >= 30) return Response.json({ error: '评论太频繁，请稍后再试。' }, { status: 429 });
-  const comment = { id: randomUUID(), author: user.displayName, avatarUrl: user.avatarUrl, body, media, createdAt: Date.now() };
-  db.prepare('INSERT INTO forum_comments (id,post_id,email,body,media_json,created_at) VALUES (?,?,?,?,?,?)').run(comment.id, postId, user.email, body, JSON.stringify(media), comment.createdAt);
+  const comment = { id: randomUUID(), author: user.displayName, avatarUrl: user.avatarUrl, body, media: attachments, createdAt: Date.now() };
+  db.prepare('INSERT INTO forum_comments (id,post_id,email,body,media_json,created_at) VALUES (?,?,?,?,?,?)').run(comment.id, postId, user.email, body, JSON.stringify(attachments), comment.createdAt);
   return Response.json({ success: true, comment }, { headers: { 'Cache-Control': 'no-store' } });
 }

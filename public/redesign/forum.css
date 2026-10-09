@@ -378,20 +378,41 @@
 
 .forum-reply { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; margin-top: 14px; }
 .forum-reply__box { min-width: 0; }
+.forum-post__body.is-folded { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 8; line-clamp: 8; overflow: hidden; }
+.forum-post__more { margin-top: 6px; color: var(--clay); font-size: 13.5px; font-weight: 500; }
+.forum-post__more:hover { text-decoration: underline; text-underline-offset: 3px; }
+.forum-missing {
+  min-width: min(240px, 100%);
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 4px;
+  min-height: 140px;
+  height: 100%;
+  padding: 18px;
+  border: 1px dashed var(--line-2);
+  border-radius: inherit;
+  background: var(--paper-sunk, var(--surface-2));
+  color: var(--ink-3);
+  text-align: center;
+}
+.forum-missing strong { color: var(--ink-2); font-size: 13.5px; font-weight: 500; }
+.forum-missing small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 11.5px; }
+.forum-reply__error { margin-top: 10px; padding: 8px 12px; font-size: 13px; }
 .forum-reply__row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 4px;
-  height: 40px;
-  padding: 0 4px 0 14px;
-  border-radius: 999px;
+  min-height: 40px;
+  padding: 3px 4px 3px 14px;
+  border-radius: 20px;
   border: 1px solid var(--line-2);
   background: var(--surface-2);
   transition: border-color .3s, box-shadow .3s, background-color .3s;
 }
 .forum-reply__row:focus-within { border-color: var(--clay); box-shadow: 0 0 0 4px var(--clay-soft); background: var(--surface); }
-.forum-reply__row input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; outline: none; font-size: 14px; }
-.forum-reply__row input::placeholder { color: var(--ink-3); }
+.forum-reply__row textarea { flex: 1; align-self: center; min-width: 0; max-height: 168px; padding: 6px 0; border: 0; background: none; outline: none; resize: none; font-size: 14px; line-height: 1.55; overflow-y: auto; }
+.forum-reply__row textarea::placeholder { color: var(--ink-3); }
 .forum-reply__row .forum-icon-btn { width: 32px; height: 32px; }
 .forum-send {
   display: inline-flex;
@@ -527,6 +548,9 @@
 .forum-me__who strong { font-family: var(--font-cn); font-size: 1.3rem; overflow-wrap: anywhere; }
 .forum-me__who span { color: var(--ink-3); font-family: var(--font-mono); font-size: 12.5px; overflow-wrap: anywhere; }
 .forum-me__note { grid-area: note; color: var(--ink-3); font-size: 12.5px; line-height: 1.6; }
+/* Errors appear beside the control that failed: the avatar here, a reply box far down the feed. */
+.forum-me:has(> .forum-alert) { grid-template-areas: "photo who" "actions actions" "alert alert" "note note" "links links"; }
+.forum-me > .forum-alert { grid-area: alert; padding: 8px 12px; font-size: 13px; }
 .forum-me__links { grid-area: links; display: flex; flex-wrap: wrap; gap: 8px; padding-top: 14px; border-top: 1px solid var(--line); }
 .forum-me__links .btn { flex: 1 1 auto; }
 

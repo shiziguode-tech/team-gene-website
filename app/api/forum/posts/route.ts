@@ -6,6 +6,7 @@ import { expectedRequestOrigin } from '@/app/admin-access';
 import type { MediaAsset } from '@/lib/content';
 import { readForumCursor, forumCursor } from '@/lib/forum-pagination';
 import { commentPage } from '@/db/forum-feed';
+import { ownForumMedia } from '@/db/forum-uploads';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -56,12 +57,15 @@ export async function POST(request: Request) {
   const media = body.media === undefined ? [] : body.media;
   if (!validForumMedia(media)) return Response.json({ error: '附件无效，最多 4 个文件，图片最多 50 MB、视频最多 500 MB，合计最多 1 GB。' }, { status: 400 });
   if ((!message && !media.length) || message.length > 5000) return Response.json({ error: '请输入动态内容，文字最多 5000 字。' }, { status: 400 });
+  const attachments = ownForumMedia(user.email, media);
+  if (!attachments) return Response.json({ error: '附件已失效，请重新添加后再发布。', code: 'media' }, { status: 400 });
   const db = forumDb();
   const since = Date.now() - 60 * 60 * 1000;
-  const recent = db.prepare('SELECT COUNT(*) AS count FROM forum_posts WHERE email=? AND created_at>? AND deleted=0').get(user.email, since) as { count: number };
+  // Deleted posts count too, so deleting and reposting cannot bypass the limit.
+  const recent = db.prepare('SELECT COUNT(*) AS count FROM forum_posts WHERE email=? AND created_at>?').get(user.email, since) as { count: number };
   if (recent.count >= 12) return Response.json({ error: '发布太频繁，请稍后再试。' }, { status: 429 });
   const id = randomUUID();
   const createdAt = Date.now();
-  db.prepare('INSERT INTO forum_posts (id,email,body,media_json,created_at) VALUES (?,?,?,?,?)').run(id, user.email, message, JSON.stringify(media), createdAt);
-  return Response.json({ success: true, post: { id, author: user.displayName, body: message, media, createdAt, comments: [] } }, { headers: { 'Cache-Control': 'no-store' } });
+  db.prepare('INSERT INTO forum_posts (id,email,body,media_json,created_at) VALUES (?,?,?,?,?)').run(id, user.email, message, JSON.stringify(attachments), createdAt);
+  return Response.json({ success: true, post: { id, author: user.displayName, body: message, media: attachments, createdAt, comments: [] } }, { headers: { 'Cache-Control': 'no-store' } });
 }

@@ -54,6 +54,69 @@ export function fieldAt(t) {
   };
 }
 
+// Which output is lit, and how brightly, t seconds after the field starts
+// moving. Nothing is predicted until the field first settles and its pass
+// reaches the outputs; after that the last prediction fades while it moves on.
+export function predictionAt(t) {
+  const field = fieldAt(t);
+  const settled = field.since >= 0;
+  const glow = settled ? smooth((field.since - MAPS.length * HOP) / .25)
+    : t > STEP_SECONDS ? Math.max(0, 1 - field.phase / .4) : 0;
+  return { winner: predictedClass(settled ? field.to : field.from), glow };
+}
+
+const ROLL_WIDE = -.26, ROLL_NARROW = -.85, YAW = .58, PITCH = -.2, FOCAL = 1300;
+
+// Camera and layout: where a point of the network lands on the canvas.
+function geometry({ S, H, F, cx, cy }, yaw, pitch, roll) {
+  const L = MAPS.length;
+  const cosYaw = Math.cos(yaw), sinYaw = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch), cr = Math.cos(roll), sr = Math.sin(roll);
+  const zMax = S / 2 * Math.abs(sinYaw) + H;
+  const project = (x, y, z) => {
+    const x1 = x * cosYaw + z * sinYaw, z1 = -x * sinYaw + z * cosYaw;
+    const y2 = y * cp - z1 * sp, z2 = y * sp + z1 * cp;
+    const k = F / (F + z2);
+    return { x: cx + (x1 * cr - y2 * sr) * k, y: cy + (x1 * sr + y2 * cr) * k, k, d: Math.min(1, Math.max(0, (zMax - z2) / (2 * zMax))) };
+  };
+  const layerX = (l) => (l / L - .5) * S; // the outputs sit at l = L
+  const half = (l) => H * (1 - l * .17);
+  const cell = (l) => 2 * half(l) / MAPS[l];
+  const corner = (l, i, j) => project(layerX(l), -half(l) + i * cell(l), -half(l) + j * cell(l));
+  const output = (o) => project(layerX(L), (o - (OUTPUTS - 1) / 2) * H * .42, 0);
+  return { corner, output };
+}
+
+// Size and centre for a w×h canvas. Wide canvases fit the network between
+// `left` and `right` (the space beside the hero text); a narrow canvas is a
+// background behind the text.
+export function fitFrame(w, h, left = 0, right = w) {
+  const narrow = w < 520;
+  const S = narrow ? Math.min(h * .62, w * 1.3) : Math.min(w * .82, h * .98, 740); // network length
+  const H = narrow ? w * .2 : Math.min(w * .18, h * .19, 155);                    // half the input map
+  if (narrow) return { S, H, F: FOCAL, cx: w * .5, cy: h * .6, narrow };
+  // Text wider than the canvas (very large font settings) must not leave a negative space.
+  left = Math.max(0, Math.min(left, right - Math.min(right, 240)));
+  const { corner, output } = geometry({ S, H, F: FOCAL, cx: 0, cy: 0 }, YAW, PITCH, ROLL_WIDE);
+  const pts = [];
+  MAPS.forEach((g, l) => pts.push(corner(l, 0, 0), corner(l, 0, g), corner(l, g, g), corner(l, g, 0)));
+  for (let o = 0; o < OUTPUTS; o++) pts.push(output(o));
+  const minX = Math.min(...pts.map(p => p.x)), maxX = Math.max(...pts.map(p => p.x));
+  const minY = Math.min(...pts.map(p => p.y)), maxY = Math.max(...pts.map(p => p.y));
+  const top = h * .18, bottom = h * .82;
+  const fit = Math.min(1, (right - left) / (maxX - minX), (bottom - top) / (maxY - minY));
+  return {
+    S: S * fit, H: H * fit, F: FOCAL * fit, narrow,
+    cx: (left + right) / 2 - (minX + maxX) / 2 * fit,
+    cy: (top + bottom) / 2 - (minY + maxY) / 2 * fit,
+  };
+}
+
+// Projected network for a frame at rest (no sway or pointer tilt); used by tests.
+export function restingPoints(frame) {
+  const { corner, output } = geometry(frame, YAW, PITCH, frame.narrow ? ROLL_NARROW : ROLL_WIDE);
+  return { maps: MAPS.map((g, l) => [corner(l, 0, 0), corner(l, 0, g), corner(l, g, g), corner(l, g, 0)]), outputs: Array.from({ length: OUTPUTS }, (_, o) => output(o)) };
+}
+
 export function initializeHeroNetwork(canvas, host, {
   reduced, listen, observe, requestAnimationFrame, cancelAnimationFrame, cleanups,
 }) {
@@ -67,58 +130,20 @@ export function initializeHeroNetwork(canvas, host, {
   let w = 0, h = 0;
   let pointerX = .5, pointerY = .5, tiltX = 0, tiltY = 0;
   let running = false, raf = 0, disposed = false;
-  let frame = { S: 0, H: 0, F: 1300, cx: 0, cy: 0, narrow: false };
+  let frame = { S: 0, H: 0, F: FOCAL, cx: 0, cy: 0, narrow: false };
   const t0 = performance.now();
-
-  // Pure camera + layout: where a point of the network lands on the canvas.
-  const geometry = ({ S, H, F, cx, cy }, yaw, pitch, roll) => {
-    const cosYaw = Math.cos(yaw), sinYaw = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch), cr = Math.cos(roll), sr = Math.sin(roll);
-    const zMax = S / 2 * Math.abs(sinYaw) + H;
-    const project = (x, y, z) => {
-      const x1 = x * cosYaw + z * sinYaw, z1 = -x * sinYaw + z * cosYaw;
-      const y2 = y * cp - z1 * sp, z2 = y * sp + z1 * cp;
-      const k = F / (F + z2);
-      return { x: cx + (x1 * cr - y2 * sr) * k, y: cy + (x1 * sr + y2 * cr) * k, k, d: Math.min(1, Math.max(0, (zMax - z2) / (2 * zMax))) };
-    };
-    const layerX = (l) => (l / L - .5) * S; // the outputs sit at l = L
-    const half = (l) => H * (1 - l * .17);
-    const cell = (l) => 2 * half(l) / MAPS[l];
-    const corner = (l, i, j) => project(layerX(l), -half(l) + i * cell(l), -half(l) + j * cell(l));
-    const output = (o) => project(layerX(L), (o - (OUTPUTS - 1) / 2) * H * .42, 0);
-    return { project, corner, output };
-  };
-  const ROLL_WIDE = -.26, ROLL_NARROW = -.85, YAW = .58, PITCH = -.2;
 
   // Wide layouts keep the network in the free space right of the hero text;
   // when the canvas spans the whole hero it is a faint background instead.
   const layout = () => {
-    const narrow = w < 520;
-    const S = narrow ? Math.min(h * .62, w * 1.3) : Math.min(w * .82, h * .98, 740); // network length
-    const H = narrow ? w * .2 : Math.min(w * .18, h * .19, 155);                    // half the input map
-    if (narrow) return { S, H, F: 1300, cx: w * .5, cy: h * .6, narrow };
     const cr = canvas.getBoundingClientRect(), hr = host.getBoundingClientRect();
-    let left = 0, right = w;
     const content = host.querySelector?.('.hero__content');
-    if (content && cr.width < hr.width * .8 && document.createRange) {
-      const range = document.createRange();
-      range.selectNodeContents(content);
-      const textRight = Math.max(0, ...[...range.getClientRects()].map(r => r.right));
-      left = Math.max(0, textRight - cr.left) + 24;
-      right = w - Math.max(28, (content.getBoundingClientRect().left - hr.left) * .6);
-    }
-    const { corner, output } = geometry({ S, H, F: 1300, cx: 0, cy: 0 }, YAW, PITCH, ROLL_WIDE);
-    const pts = [];
-    MAPS.forEach((g, l) => pts.push(corner(l, 0, 0), corner(l, 0, g), corner(l, g, g), corner(l, g, 0)));
-    for (let o = 0; o < OUTPUTS; o++) pts.push(output(o));
-    const minX = Math.min(...pts.map(p => p.x)), maxX = Math.max(...pts.map(p => p.x));
-    const minY = Math.min(...pts.map(p => p.y)), maxY = Math.max(...pts.map(p => p.y));
-    const top = h * .18, bottom = h * .82;
-    const fit = Math.min(1, (right - left) / (maxX - minX), (bottom - top) / (maxY - minY));
-    return {
-      S: S * fit, H: H * fit, F: 1300 * fit, narrow,
-      cx: (left + right) / 2 - (minX + maxX) / 2 * fit,
-      cy: (top + bottom) / 2 - (minY + maxY) / 2 * fit,
-    };
+    if (w < 520 || !content || cr.width >= hr.width * .8 || !document.createRange) return fitFrame(w, h);
+    const range = document.createRange();
+    range.selectNodeContents(content);
+    const textRight = Math.max(0, ...[...range.getClientRects()].map(r => r.right));
+    const gutter = Math.max(0, content.getBoundingClientRect().left - hr.left);
+    return fitFrame(w, h, Math.max(0, textRight - cr.left) + 24, w - Math.max(28, gutter * .6));
   };
 
   const resize = () => {
@@ -148,11 +173,11 @@ export function initializeHeroNetwork(canvas, host, {
     const live = reduced ? 1 : smooth((t - INTRO + .4) / 1.2);
 
     const field = fieldAt(t - INTRO);
-    const { a: fa, b: fb, since, phase } = field;
+    const { a: fa, b: fb, since } = field;
     // The forward pass reaches layer l HOP·l seconds after the field settles.
     const pulse = (l) => (since < 0 ? 0 : Math.exp(-(((since - l * HOP) / .14) ** 2)));
-    const winner = predictedClass(since < 0 ? field.from : field.to);
-    const outGlow = live * (since < 0 ? Math.max(0, 1 - phase / .4) : smooth((since - L * HOP) / .25));
+    const { winner, glow } = predictionAt(t - INTRO);
+    const outGlow = live * glow;
 
     // Feature maps: cells tinted by their activation, a faint grid and an edge.
     for (let l = 0; l < L; l++) {
